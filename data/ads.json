@@ -1,0 +1,22 @@
+[
+  {
+    "id": "ad1",
+    "slot": "home",
+    "title": "Your business here",
+    "text": "Reach a trusted community. Sponsored slots start small.",
+    "cta": "Advertise with us",
+    "link": "#/advertise",
+    "sponsor": "Demo ad",
+    "sample": true
+  },
+  {
+    "id": "ad2",
+    "slot": "shop",
+    "title": "Featured vendor slot",
+    "text": "Put your shop at the top of the Shop page.",
+    "cta": "See options",
+    "link": "#/advertise",
+    "sponsor": "Demo ad",
+    "sample": true
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "p1",
+    "vendor": "v-attar",
+    "name": "Rose Attar (alcohol-free)",
+    "cat": "attar",
+    "price": 450,
+    "desc": "12 ml roll-on. Soft rose oil in a sandalwood base.",
+    "color": "#b5476a",
+    "emoji": "🌹",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p2",
+    "vendor": "v-attar",
+    "name": "Oud Attar",
+    "cat": "attar",
+    "price": 1200,
+    "desc": "6 ml. Deep, long-lasting oud oil.",
+    "color": "#5b3a29",
+    "emoji": "🪵",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p3",
+    "vendor": "v-attar",
+    "name": "Musk Attar",
+    "cat": "attar",
+    "price": 350,
+    "desc": "12 ml roll-on. Clean white musk.",
+    "color": "#7a8794",
+    "emoji": "🤍",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p4",
+    "vendor": "v-topi",
+    "name": "Embroidered Topi",
+    "cat": "topi",
+    "price": 300,
+    "desc": "Breathable cotton, one size.",
+    "color": "#2d6a5a",
+    "emoji": "🧢",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p5",
+    "vendor": "v-topi",
+    "name": "White Prayer Cap",
+    "cat": "topi",
+    "price": 180,
+    "desc": "Plain cotton cap, pack of 1.",
+    "color": "#cfd6d3",
+    "emoji": "⚪",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p6",
+    "vendor": "v-books",
+    "name": "Prayer Mat (travel)",
+    "cat": "essentials",
+    "price": 650,
+    "desc": "Thin, foldable, with pouch.",
+    "color": "#1f4e79",
+    "emoji": "🕌",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p7",
+    "vendor": "v-books",
+    "name": "Tasbih (99 beads)",
+    "cat": "essentials",
+    "price": 220,
+    "desc": "Wooden beads on a cord.",
+    "color": "#8a5a2b",
+    "emoji": "📿",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p8",
+    "vendor": "v-books",
+    "name": "Miswak (pack of 5)",
+    "cat": "essentials",
+    "price": 120,
+    "desc": "Fresh natural miswak sticks.",
+    "color": "#7f9a4d",
+    "emoji": "🌿",
+    "buy": "",
+    "sample": true
+  }
+]

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "v-attar",
+    "name": "Sample Attar House",
+    "city": "Hyderabad",
+    "about": "Demo vendor. Alcohol-free attars and oud oils.",
+    "contact": "",
+    "verified": false,
+    "sample": true
+  },
+  {
+    "id": "v-topi",
+    "name": "Sample Topi & Cap Works",
+    "city": "Hyderabad",
+    "about": "Demo vendor. Handmade topis and prayer caps.",
+    "contact": "",
+    "verified": false,
+    "sample": true
+  },
+  {
+    "id": "v-books",
+    "name": "Sample Books & Essentials",
+    "city": "Hyderabad",
+    "about": "Demo vendor. Prayer mats, tasbih, miswak and books.",
+    "contact": "",
+    "verified": false,
+    "sample": true
+  }
+]
