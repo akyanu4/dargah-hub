@@ -2,6 +2,9 @@
 
 A separate, data-driven platform: dargah spaces, a vendor shop, sponsored slots and onboarding pages. Static site, no build step, no database. Independent of Noor-ul-Hasrat.
 
+## Vendors add their own items
+Vendors sign in at `#/sell`, either list an existing shop (link out) or create a shop here with items and photos. An admin approves them at `#/admin`. This needs Firebase: follow `SETUP-VENDORS.md`. Until then the site shows only the sample data.
+
 ## Run locally
 `python3 -m http.server 8000` then open http://localhost:8000
 

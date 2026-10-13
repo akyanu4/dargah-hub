@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function approvedVendor(uid) { return get(/databases/$(database)/documents/vendors/$(uid)).data.status == 'approved'; }
+
+    function okVendor(d) {
+      return d.keys().hasOnly(['name','city','about','type','shopUrl','whatsapp','phone','contactEmail','status','updatedAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        && d.city is string && d.city.size() <= 60
+        && d.about is string && d.about.size() <= 500
+        && d.type in ['shop','direct']
+        && d.shopUrl is string && d.shopUrl.size() <= 300
+        && d.whatsapp is string && d.whatsapp.size() <= 20
+        && d.phone is string && d.phone.size() <= 30
+        && d.contactEmail is string && d.contactEmail.size() <= 120;
+    }
+    function okProduct(d) {
+      return d.keys().hasOnly(['vendorId','name','cat','price','desc','img','buy','hidden','updatedAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        && d.cat is string && d.cat.size() >= 1 && d.cat.size() <= 40
+        && d.price is number && d.price >= 0 && d.price < 10000000
+        && d.desc is string && d.desc.size() <= 500
+        && d.img is string && d.img.size() <= 140000
+        && d.buy is string && d.buy.size() <= 300
+        && d.hidden is bool;
+    }
+
+    // Admins are added by hand in the Firebase console (a document whose id is the admin's user id).
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /vendors/{uid} {
+      allow read: if resource.data.status == 'approved' || (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.status == 'pending' && okVendor(request.resource.data);
+      allow update: if (signedIn() && request.auth.uid == uid && request.resource.data.status == resource.data.status && okVendor(request.resource.data)) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /products/{id} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data);
+      allow update: if (signedIn() && resource.data.vendorId == request.auth.uid && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data)) || isAdmin();
+      allow delete: if (signedIn() && resource.data.vendorId == request.auth.uid) || isAdmin();
+    }
+  }
+}
