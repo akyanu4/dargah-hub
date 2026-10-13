@@ -12,7 +12,7 @@ A separate, data-driven platform: dargah spaces, a vendor shop, sponsored slots 
 4. Set `"sample": false` and, once the keeper is confirmed, `"verified": true`.
 
 ## Onboard a vendor and products
-1. Add the vendor to `data/vendors.json`, then products to `data/products.json` (`vendor` = vendor id, `buy` = the vendor's own https link or WhatsApp `https://wa.me/<number>`).
+1. Any halal product or service is welcome. Categories are open: use any `cat` value on a product (it is title-cased automatically) or give it a nicer label in `data/categories.json`. Add the vendor to `data/vendors.json`, then products to `data/products.json` (`vendor` = vendor id, `buy` = the vendor's own https link or WhatsApp `https://wa.me/<number>`).
 2. Replace `emoji`/`color` with a real photo later by adding an `img` field (not yet shown by the site; ask to add).
 
 ## Ads

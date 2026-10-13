@@ -25,5 +25,32 @@
     "contact": "",
     "verified": false,
     "sample": true
+  },
+  {
+    "id": "v-food",
+    "name": "Sample Dates & Sweets",
+    "city": "Hyderabad",
+    "about": "Demo vendor. Dates, dry fruits and traditional sweets.",
+    "contact": "",
+    "verified": false,
+    "sample": true
+  },
+  {
+    "id": "v-wear",
+    "name": "Sample Modest Wear",
+    "city": "Hyderabad",
+    "about": "Demo vendor. Kurtas, sherwanis and abayas.",
+    "contact": "",
+    "verified": false,
+    "sample": true
+  },
+  {
+    "id": "v-serv",
+    "name": "Sample Calligraphy Studio",
+    "city": "Hyderabad",
+    "about": "Demo vendor. Calligraphy, framing and custom gifts.",
+    "contact": "",
+    "verified": false,
+    "sample": true
   }
 ]

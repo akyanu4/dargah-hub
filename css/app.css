@@ -92,3 +92,6 @@ html{background:var(--page,var(--bg))}
 :root[data-theme=plum]{--ink:#241431;--bg:#f7f2fb;--panel:#fff;--night:#35194d;--amber:#e69a0b;--amber-d:#b97800;--line:#e3d6ef;--muted:#6d5a80;--sage:#2f6f5f}
 :root[data-theme=clean]{--ink:#101714;--bg:#f6f8f7;--panel:#fff;--night:#0e1f19;--amber:#0e9a6a;--amber-d:#0b7a54;--line:#dde5e1;--muted:#56645d;--sage:#0e9a6a}
 :root[data-theme=slate]{--ink:#14181f;--bg:#f3f5f7;--panel:#fff;--night:#1b2430;--amber:#1aa6a0;--amber-d:#12827d;--line:#dbe1e7;--muted:#5a6573;--sage:#1aa6a0}
+
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;margin:4px 0 10px}
+.art span{max-width:90%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -16,7 +16,7 @@
     }).join('');
   }
   var TONE = ['#d9c9b0', '#b9c4d8', '#c4d3c8', '#d8bfc6'];
-  function catName(id) { var c = (D.categories || []).filter(function (x) { return x.id === id; })[0]; return c ? c.name : ''; }
+  function catName(id) { var c = (D.categories || []).filter(function (x) { return x.id === id; })[0]; return c ? c.name : String(id || '').replace(/[-_]+/g, ' ').replace(/\b\w/g, function (m) { return m.toUpperCase(); }); }
   function art(p, i) {
     var img = p.img && /^(photos\/|https:\/\/)/.test(p.img) ? '<img loading="lazy" alt="' + esc(p.name) + '" src="' + esc(p.img) + '">' : '';
     return '<div class="art" style="--tone:' + TONE[(i || 0) % 4] + '">' + img + (img ? '' : '<span>' + esc(catName(p.cat)) + '</span>') + '</div>';
@@ -90,10 +90,12 @@
         '<p class="muted">' + (d.updated ? 'Last updated ' + esc(d.updated) + '. ' : '') + 'Something wrong or out of date? <a href="mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=' + encodeURIComponent('Correction: ' + d.name) + '"><b>Tell us</b></a>.</p>';
     },
     shop: function (cat) {
+      var known = D.categories.map(function (c) { return c.id; }), cats = D.categories.filter(function (c) { return D.products.some(function (p) { return p.cat === c.id; }); });
+      D.products.forEach(function (p) { if (p.cat && known.indexOf(p.cat) < 0 && !cats.some(function (c) { return c.id === p.cat; })) cats.push({ id: p.cat, name: catName(p.cat) }); });
       var list = D.products.filter(function (p) { return !cat || p.cat === cat; });
-      return '<h1>The shop</h1><p class="muted">Independent vendors sell here. ' + esc(D.platform.name) + ' does not take payment or deliver: you buy straight from the vendor.</p>' + ads('shop') +
-        '<div class="chips"><a class="chip' + (!cat ? ' on' : '') + '" href="#/shop">All</a>' + D.categories.map(function (c) { return '<a class="chip' + (cat === c.id ? ' on' : '') + '" href="#/shop/' + esc(c.id) + '">' + esc(c.name) + '</a>'; }).join('') + '</div>' +
-        (list.length ? '<div class="grid">' + list.map(card).join('') + '</div>' : '<div class="box">Nothing in this category yet. Vendors can <a href="#/join"><b>apply to list here</b></a>.</div>');
+      return '<h1>The shop</h1><p class="muted">Independent vendors sell here, from attar and books to food, clothing and gifts. ' + esc(D.platform.name) + ' does not take payment or deliver: you buy straight from the vendor.</p><input class="search" id="q" type="search" placeholder="Search products and vendors" aria-label="Search the shop">' + ads('shop') +
+        '<div class="chips"><a class="chip' + (!cat ? ' on' : '') + '" href="#/shop">All</a>' + cats.map(function (c) { return '<a class="chip' + (cat === c.id ? ' on' : '') + '" href="#/shop/' + esc(c.id) + '">' + esc(c.name) + '</a>'; }).join('') + '</div>' +
+        '<div id="plist">' + shopGrid(list) + '</div><h2>Vendors</h2><div class="list">' + D.vendors.map(function (v) { return '<a href="#/v/' + esc(v.id) + '"><span>' + esc(v.name) + '<br><small class="muted">' + esc(v.city) + '</small></span><i>›</i></a>'; }).join('') + '</div><p class="muted">Sell something different? <a href="#/join"><b>Apply as a vendor</b></a>. Any kind of halal product or service is welcome.</p>';
     },
     product: function (id) {
       var p = D.products.filter(function (x) { return x.id === id; })[0]; if (!p) return nf(); var v = vendor(p.vendor), b = safeUrl(p.buy), i0 = D.products.indexOf(p);
@@ -110,7 +112,7 @@
       var mail = 'mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=';
       return '<div class="hero"><h1>Join ' + esc(D.platform.name) + '</h1><p>Two ways in. Both start with a short email, and we approve every listing by hand.</p></div>' +
         '<h2>Keep a dargah</h2><div class="box"><ul><li>A page with your name, photos, events, videos and map pin.</li><li>The basic listing is free. Notifications and extra media are optional.</li></ul><div class="muted">Send your dargah name, city, a short About text, photos you own, and the keeper\'s contact.</div><a class="btn full" href="' + mail + encodeURIComponent('List our dargah') + '">Email to list your dargah</a></div>' +
-        '<h2>Sell as a vendor</h2><div class="box"><ul><li>Show your products and send buyers to your own checkout or WhatsApp.</li><li>A yearly listing fee. Featured placement is optional and always marked Sponsored.</li><li>You are the seller and handle delivery and returns.</li></ul><a class="btn full" href="' + mail + encodeURIComponent('Vendor listing') + '">Email to become a vendor</a></div>' +
+        '<h2>Sell as a vendor</h2><div class="box"><ul><li>Sell anything halal: products, food, clothing, books, gifts or services. Send buyers to your own checkout or WhatsApp.</li><li>A yearly listing fee. Featured placement is optional and always marked Sponsored.</li><li>You are the seller and handle delivery and returns.</li></ul><a class="btn full" href="' + mail + encodeURIComponent('Vendor listing') + '">Email to become a vendor</a></div>' +
         '<h2>How it works</h2><div class="steps"><div>You email us your details.</div><div>We check who you are and approve your listing.</div><div>Your page goes live on the hub.</div></div><p class="muted">Read the <a href="terms.html"><b>terms</b></a> first.</p>';
     },
     advertise: function () {
@@ -119,11 +121,17 @@
         '<p class="muted">Prices are set per slot. Ask for the current rate card.</p><a class="btn full" href="mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=Advertise">Ask about advertising</a>';
     }
   };
+  function shopGrid(list) { return list.length ? '<div class="grid">' + list.map(function (p) { return card(p, D.products.indexOf(p)); }).join('') + '</div>' : '<div class="box">Nothing found. Vendors can <a href="#/join"><b>apply to list here</b></a>.</div>'; }
   function nf() { return '<h2>Not found</h2><p><a href="#/">Go home</a></p>'; }
 
   var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise' };
   var TAB = { home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more' };
   var timer = null;
+  document.addEventListener('input', function (e) {
+    if (!e.target || e.target.id !== 'q') return; var q = e.target.value.trim().toLowerCase(), box = document.getElementById('plist'); if (!box) return;
+    var list = D.products.filter(function (p) { var v = vendor(p.vendor); return !q || (p.name + ' ' + p.desc + ' ' + catName(p.cat) + ' ' + (v ? v.name : '')).toLowerCase().indexOf(q) >= 0; });
+    box.innerHTML = shopGrid(list);
+  });
   document.addEventListener('click', function (e) {
     var t = e.target, b;
     if ((b = t.closest && t.closest('#shr'))) { var u = location.href, tt = b.getAttribute('data-t'); if (navigator.share) navigator.share({ title: tt, url: u }).catch(function () {}); else if (navigator.clipboard) navigator.clipboard.writeText(u).then(function () { b.lastChild.textContent = 'Copied'; }); return; }

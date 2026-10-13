@@ -10,5 +10,21 @@
   {
     "id": "essentials",
     "name": "Prayer Essentials"
+  },
+  {
+    "id": "food",
+    "name": "Food & Sweets"
+  },
+  {
+    "id": "clothing",
+    "name": "Clothing"
+  },
+  {
+    "id": "gifts",
+    "name": "Gifts & Art"
+  },
+  {
+    "id": "books",
+    "name": "Books"
   }
 ]

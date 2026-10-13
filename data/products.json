@@ -94,5 +94,77 @@
     "emoji": "🌿",
     "buy": "",
     "sample": true
+  },
+  {
+    "id": "p9",
+    "vendor": "v-food",
+    "name": "Ajwa Dates (500 g)",
+    "cat": "food",
+    "price": 900,
+    "desc": "Soft Madinah-style dates in a gift box.",
+    "color": "",
+    "emoji": "",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p10",
+    "vendor": "v-food",
+    "name": "Dry Fruit Gift Box",
+    "cat": "food",
+    "price": 750,
+    "desc": "Mixed almonds, cashews and pistachios.",
+    "color": "",
+    "emoji": "",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p11",
+    "vendor": "v-wear",
+    "name": "Cotton Kurta",
+    "cat": "clothing",
+    "price": 1100,
+    "desc": "Straight-cut kurta, sizes S to XXL.",
+    "color": "",
+    "emoji": "",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p12",
+    "vendor": "v-wear",
+    "name": "Prayer Abaya",
+    "cat": "clothing",
+    "price": 1800,
+    "desc": "Lightweight and easy to pray in.",
+    "color": "",
+    "emoji": "",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p13",
+    "vendor": "v-serv",
+    "name": "Custom Calligraphy Frame",
+    "cat": "gifts",
+    "price": 2500,
+    "desc": "Your chosen ayah or name, framed.",
+    "color": "",
+    "emoji": "",
+    "buy": "",
+    "sample": true
+  },
+  {
+    "id": "p14",
+    "vendor": "v-books",
+    "name": "Tafseer Set (demo)",
+    "cat": "books",
+    "price": 3200,
+    "desc": "Placeholder for a book listing.",
+    "color": "",
+    "emoji": "",
+    "buy": "",
+    "sample": true
   }
 ]
