@@ -6,7 +6,7 @@ A separate, data-driven platform: dargah spaces, a vendor shop, sponsored slots 
 `python3 -m http.server 8000` then open http://localhost:8000
 
 ## Onboard a dargah
-1. Add `data/dargahs/<id>.json` (copy `sample-a.json`).
+1. Add `data/dargahs/<id>.json` (copy `_template.json`). It holds the About text, facts, address, map pin (`lat`/`lon`), phone, WhatsApp, timings, events, videos, photos and sources.
 2. Add `<id>` to `data/dargahs/index.json`.
 3. Put photos in `photos/<id>/` and list them under `gallery` (`{ "src": "photos/<id>/1.jpg", "caption": "..." }`). Keep each under ~300 KB.
 4. Set `"sample": false` and, once the keeper is confirmed, `"verified": true`.

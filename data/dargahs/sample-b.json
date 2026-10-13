@@ -4,7 +4,9 @@
   "short": "Sample Dargah B",
   "city": "Your city",
   "tagline": "Demo space: replace with real details",
-  "about": "This is a demo space showing what a dargah page looks like. A real dargah supplies its own About text, photos, events, videos and map pin.",
+  "about": [
+    "This is a demo space showing what a dargah page looks like. A real dargah supplies its own About text, photos, events, videos and map pin."
+  ],
   "map": "",
   "app": "",
   "events": [
@@ -23,5 +25,30 @@
   "gallery": [],
   "verified": false,
   "sample": true,
-  "color": "#1d4f6b"
+  "color": "#1d4f6b",
+  "facts": [
+    [
+      "Established",
+      "Year (demo)"
+    ]
+  ],
+  "address": "Street, area, city (demo)",
+  "lat": null,
+  "lon": null,
+  "phone": "",
+  "whatsapp": "",
+  "email": "",
+  "website": "",
+  "timings": [
+    {
+      "label": "Daily",
+      "time": "Fajr to Isha (demo)"
+    },
+    {
+      "label": "Friday",
+      "time": "Open all day (demo)"
+    }
+  ],
+  "sources": [],
+  "updated": "2026-10-12"
 }

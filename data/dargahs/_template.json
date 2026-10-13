@@ -1,0 +1,63 @@
+{
+  "id": "your-id",
+  "name": "Full name of the dargah",
+  "short": "Short name",
+  "city": "Area, City",
+  "tagline": "One line",
+  "about": [
+    "First paragraph.",
+    "Second paragraph."
+  ],
+  "facts": [
+    [
+      "Established",
+      "Year"
+    ],
+    [
+      "Urs",
+      "When"
+    ]
+  ],
+  "address": "Full postal address",
+  "lat": 0,
+  "lon": 0,
+  "map": "https://www.google.com/maps/place/...",
+  "phone": "+91 00000 00000",
+  "whatsapp": "91XXXXXXXXXX",
+  "email": "",
+  "website": "",
+  "timings": [
+    {
+      "label": "Daily",
+      "time": "5:00 AM to 9:00 PM"
+    }
+  ],
+  "events": [
+    {
+      "title": "Weekly dars",
+      "when": "Friday after Asr",
+      "note": ""
+    }
+  ],
+  "videos": [
+    {
+      "id": "YouTubeVideoId11",
+      "title": "Title"
+    }
+  ],
+  "gallery": [
+    {
+      "src": "photos/your-id/1.jpg",
+      "caption": "Caption"
+    }
+  ],
+  "social": {
+    "youtube": "",
+    "instagram": "",
+    "facebook": ""
+  },
+  "sources": [],
+  "updated": "YYYY-MM-DD",
+  "verified": false,
+  "sample": false
+}

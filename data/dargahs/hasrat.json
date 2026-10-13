@@ -2,15 +2,66 @@
   "id": "hasrat",
   "name": "Dargah Hazrat Muhammad Abdul Qadeer Siddiqui Quadri",
   "short": "Hazrat Hasrat",
-  "city": "Hyderabad, India",
-  "tagline": "Bahr ul-Uloom, Hyderabad",
-  "about": "Listing for the Dargah of Hazrat Muhammad Abdul Qadeer Siddiqui Quadri (Hasrat). Full teachings, poetry, videos and prayer tools are in the Noor-ul-Hasrat app.",
+  "city": "Bahadurpura, Hyderabad",
+  "tagline": "Siddiq Gulshan, resting place of Bahr ul-Uloom",
+  "about": [
+    "The Dargah of Hazrat Maulana Muhammad Abdul Qadeer Siddiqui Quadri (Hasrat), known as Bahr ul-Uloom, \"Ocean of Knowledge\", and lovingly as Qadeer Piya. He was a mufassir, muhaddith, Sufi and poet, and the first head of the Theology faculty at Osmania University.",
+    "He is buried at Siddiq Gulshan, Bahadurpura, Hyderabad. His teachings, poetry and videos are in the Noor-ul-Hasrat app."
+  ],
   "map": "https://www.google.com/maps/place/Dargah+Hazrat+Muhammad+Abdul+Qadeer+Siddiqui+Quadri/@17.3596579,78.4543992,17z",
   "app": "https://noor-ul-hasrat.vercel.app/",
-  "events": [],
+  "events": [
+    {
+      "title": "Annual Urs",
+      "when": "16, 17 and 18 Shawwal",
+      "note": "Confirm the exact dates with the dargah each year, as they depend on moon sighting"
+    }
+  ],
   "videos": [],
-  "gallery": [],
+  "gallery": [
+    {
+      "src": "photos/hasrat/hazrat-1.jpg",
+      "caption": "Hazrat Muhammad Abdul Qadeer Siddiqui (Hasrat)"
+    }
+  ],
   "verified": false,
   "sample": false,
-  "color": "#0f3d3e"
+  "color": "#0f3d3e",
+  "facts": [
+    [
+      "Born",
+      "12 October 1871 (27 Rajab 1288 AH), Hyderabad"
+    ],
+    [
+      "Passed away",
+      "24 March 1962 (17 Shawwal 1381 AH), Hyderabad"
+    ],
+    [
+      "Best known work",
+      "Tafseer-e-Siddiqui, a six-volume commentary on the Qur'an"
+    ],
+    [
+      "Urs",
+      "Observed on the 16th, 17th and 18th of Shawwal each year"
+    ]
+  ],
+  "address": "Siddiq Gulshan, Bahadurpura, Hyderabad, Telangana, India",
+  "lat": 17.3596528,
+  "lon": 78.4569741,
+  "phone": "",
+  "whatsapp": "",
+  "email": "",
+  "website": "https://noor-ul-hasrat.vercel.app/",
+  "timings": [],
+  "sources": [
+    {
+      "title": "Siddiq Gulshan family site",
+      "url": "https://siddiqgulshan.com/index.php/family-members/prof-mohammed-abdul-qadeer-siddiqui/"
+    },
+    {
+      "title": "Hasrat Chicago",
+      "url": "https://hasratchicago.com/scholars/hazrat-muhammad-abdul-qadeer-siddiqui-hasrat/"
+    }
+  ],
+  "updated": "2026-10-12"
 }

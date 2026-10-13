@@ -59,13 +59,34 @@
     },
     dargah: function (id) {
       var d = D.dargahs.filter(function (x) { return x.id === id; })[0]; if (!d) return nf();
-      var m = safeUrl(d.map), a = safeUrl(d.app);
-      return '<div class="hero"><h1>' + esc(d.name) + '</h1><p>' + esc(d.city) + '. ' + esc(d.tagline) + '</p><div>' + sampleTag(d) + verTag(d) + '</div></div>' +
-        '<div class="box">' + esc(d.about) + '</div>' + (a ? '<a class="btn full" target="_blank" rel="noopener" href="' + esc(a) + '">Open the full app</a>' : '') + (m ? '<a class="btn ghost full" target="_blank" rel="noopener" href="' + esc(m) + '">Open on Google Maps</a>' : '') +
+      var m = safeUrl(d.map), a = safeUrl(d.website), ph = String(d.phone || '').replace(/[^\d+]/g, ''), wa = String(d.whatsapp || '').replace(/\D/g, ''), hasGeo = typeof d.lat === 'number' && typeof d.lon === 'number';
+      var about = Array.isArray(d.about) ? d.about : (d.about ? [d.about] : []);
+      var photos = (d.gallery || []).filter(function (g) { return /^(photos\/|https:\/\/)/.test(g.src || ''); });
+      var acts = '';
+      if (ph) acts += '<a class="act" href="tel:' + esc(ph) + '"><i>📞</i>Call</a>';
+      if (wa) acts += '<a class="act" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '"><i>💬</i>WhatsApp</a>';
+      if (hasGeo) acts += '<a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + d.lat + ',' + d.lon + '"><i>🧭</i>Directions</a>';
+      else if (m) acts += '<a class="act" target="_blank" rel="noopener" href="' + esc(m) + '"><i>🧭</i>Map</a>';
+      acts += '<button class="act" type="button" id="shr" data-t="' + esc(d.name) + '"><i>↗</i>Share</button>';
+      var info = '';
+      if (d.address) info += '<div class="irow"><span>Address</span><div>' + esc(d.address) + '</div></div>';
+      (d.timings || []).forEach(function (t) { info += '<div class="irow"><span>' + esc(t.label) + '</span><div>' + esc(t.time) + '</div></div>'; });
+      if (ph) info += '<div class="irow"><span>Phone</span><div><a href="tel:' + esc(ph) + '">' + esc(d.phone) + '</a></div></div>';
+      if (d.email) info += '<div class="irow"><span>Email</span><div><a href="mailto:' + esc(d.email) + '">' + esc(d.email) + '</a></div></div>';
+      if (a) info += '<div class="irow"><span>Website</span><div><a target="_blank" rel="noopener" href="' + esc(a) + '">' + esc(a.replace(/^https?:\/\//, '').replace(/\/$/, '')) + '</a></div></div>';
+      var cover = photos[0] ? '<img class="cover" alt="' + esc(photos[0].caption) + '" src="' + esc(photos[0].src) + '">' : '';
+      return '<div class="hero dh">' + cover + '<div class="hb"><h1>' + esc(d.name) + '</h1><p>' + esc(d.city) + (d.tagline ? '. ' + esc(d.tagline) : '') + '</p><div>' + sampleTag(d) + verTag(d) + '</div></div></div>' +
+        '<div class="acts">' + acts + '</div>' +
+        (about.length ? '<h2>About</h2><div class="box">' + about.map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('') + '</div>' : '') +
+        (d.facts && d.facts.length ? '<div class="box facts">' + d.facts.map(function (f) { return '<div class="irow"><span>' + esc(f[0]) + '</span><div>' + esc(f[1]) + '</div></div>'; }).join('') + '</div>' : '') +
+        (info ? '<h2>Visit and contact</h2><div class="box facts">' + info + '</div>' : '<div class="box muted">Contact details have not been added yet. The keeper can send them through <a href="#/join"><b>Join</b></a>.</div>') +
+        (hasGeo ? '<div class="box mapbox" id="mapbox"><button class="btn ghost full" type="button" id="showmap" data-lat="' + d.lat + '" data-lon="' + d.lon + '">Show the map here</button><div class="muted">Loading the map shares your IP address with Google.</div></div>' : '') +
+        (m ? '<a class="btn ghost full" target="_blank" rel="noopener" href="' + esc(m) + '">Open in Google Maps</a>' : '') +
         (d.events && d.events.length ? '<h2>Events</h2>' + d.events.map(function (e) { return '<div class="box"><b>' + esc(e.title) + '</b><div class="muted">' + esc(e.when) + (e.note ? '. ' + esc(e.note) : '') + '</div></div>'; }).join('') : '') +
+        (photos.length ? '<h2>Photos</h2><div class="gal">' + photos.map(function (g) { return '<a class="gi" href="' + esc(g.src) + '" data-lb="' + esc(g.src) + '" data-cap="' + esc(g.caption) + '"><img loading="lazy" alt="' + esc(g.caption) + '" src="' + esc(g.src) + '"></a>'; }).join('') + '</div>' : '') +
         (d.videos && d.videos.length ? '<h2>Videos</h2>' + d.videos.filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id || ''); }).map(function (v) { return '<div class="box"><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + esc(v.id) + '">▶ ' + esc(v.title) + '</a></div>'; }).join('') : '') +
-        (d.gallery && d.gallery.length ? '<h2>Gallery</h2><div class="grid">' + d.gallery.filter(function (g) { return /^(photos\/|https:\/\/)/.test(g.src || ''); }).map(function (g) { return '<div class="card"><img alt="' + esc(g.caption) + '" loading="lazy" style="width:100%;display:block" src="' + esc(g.src) + '"><div class="pad muted">' + esc(g.caption) + '</div></div>'; }).join('') + '</div>' : '') +
-        '<p class="muted">Do you keep this dargah? <a href="#/join"><b>Ask to update your page</b></a>.</p>';
+        (d.sources && d.sources.length ? '<h2>Sources</h2><div class="box muted">' + d.sources.map(function (x) { var u = safeUrl(x.url); return u ? '<div><a target="_blank" rel="noopener" href="' + esc(u) + '">' + esc(x.title) + '</a></div>' : ''; }).join('') + '</div>' : '') +
+        '<p class="muted">' + (d.updated ? 'Last updated ' + esc(d.updated) + '. ' : '') + 'Something wrong or out of date? <a href="mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=' + encodeURIComponent('Correction: ' + d.name) + '"><b>Tell us</b></a>.</p>';
     },
     shop: function (cat) {
       var list = D.products.filter(function (p) { return !cat || p.cat === cat; });
@@ -102,6 +123,12 @@
   var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise' };
   var TAB = { home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more' };
   var timer = null;
+  document.addEventListener('click', function (e) {
+    var t = e.target, b;
+    if ((b = t.closest && t.closest('#shr'))) { var u = location.href, tt = b.getAttribute('data-t'); if (navigator.share) navigator.share({ title: tt, url: u }).catch(function () {}); else if (navigator.clipboard) navigator.clipboard.writeText(u).then(function () { b.lastChild.textContent = 'Copied'; }); return; }
+    if ((b = t.closest && t.closest('#showmap'))) { var la = parseFloat(b.getAttribute('data-lat')), lo = parseFloat(b.getAttribute('data-lon')); if (isFinite(la) && isFinite(lo)) b.parentNode.innerHTML = '<iframe title="Map" loading="lazy" referrerpolicy="no-referrer" src="https://www.google.com/maps?q=' + la + ',' + lo + '&z=16&output=embed" style="border:0;width:100%;height:280px;border-radius:12px"></iframe>'; return; }
+    if ((b = t.closest && t.closest('[data-lb]'))) { e.preventDefault(); var o = document.createElement('div'); o.className = 'lbx'; var im = document.createElement('img'); im.src = b.getAttribute('data-lb'); im.alt = b.getAttribute('data-cap') || ''; var c = document.createElement('div'); c.textContent = b.getAttribute('data-cap') || ''; o.appendChild(im); o.appendChild(c); o.addEventListener('click', function () { o.remove(); }); document.body.appendChild(o); }
+  });
   function route() {
     var h = (location.hash || '#/').replace(/^#\/?/, '').split('/'), r = h[0] || 'home', html, title, bind = null, view = document.createElement('div');
     clearInterval(timer);
