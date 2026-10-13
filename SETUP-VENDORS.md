@@ -1,5 +1,16 @@
 # Turn on the vendor portal (Firebase, free Spark plan)
 
+**This repo is already pointed at the same Firebase project as Noor-ul-Hasrat (`siddiqgulshan-25903`).** Finish these console steps in that project (Firebase console > project siddiqgulshan-25903):
+
+1. **Authentication > Sign-in method:** enable **Google** and **Email/Password** (keep Anonymous on: the Noor app uses it).
+2. **Authentication > Settings > Authorized domains:** add `dargah-hub.vercel.app` (and your own domain later).
+3. **Firestore Database > Create database** (production mode, a region near your users). It is separate from the Realtime Database Noor uses.
+4. **Firestore > Rules:** paste all of `firestore.rules` and Publish. This does not touch Noor's Realtime Database rules.
+5. If the API key has restrictions in Google Cloud Console (APIs & Services > Credentials), add `dargah-hub.vercel.app/*` to its allowed referrers.
+6. Make yourself an admin (step 8 below).
+
+The generic steps follow, in case you ever want a separate project instead.
+
 The site works without this (it shows only the sample data). These steps switch on vendor sign-in, "Sell on the hub", item photos and admin approvals.
 
 1. Go to https://console.firebase.google.com and create a project (any name, for example `dargah-hub`). Analytics can stay off.
