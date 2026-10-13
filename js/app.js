@@ -24,15 +24,38 @@
   function card(p, i) { var v = vendor(p.vendor); return '<a class="card p" href="#/p/' + esc(p.id) + '">' + art(p, i) + '<div class="pad"><b>' + esc(p.name) + '</b><span class="price">' + money(p.price) + '</span><div class="muted">' + esc(v ? v.name : '') + '</div></div></a>'; }
   function dcard(d, i) { return '<a class="card dg" href="#/d/' + esc(d.id) + '"><div class="dot">' + esc((d.short || d.name).charAt(0)) + '</div><div><b>' + esc(d.name) + '</b><div>' + sampleTag(d) + verTag(d) + '</div><div class="muted">' + esc(d.city) + '. ' + esc(d.tagline) + '</div></div></a>'; }
 
+
+  var T = root_tools();
+  function root_tools() { return window.HubTools; }
+  function nextCard() {
+    var n = T && T.next(); if (!n) return '';
+    return '<a class="nextcard" href="#/prayer"><div class="muted2">Next prayer in ' + esc(T.loc().name) + '</div><div class="row2"><b>' + esc(T.NAMES[n.name]) + '</b><span class="big">' + esc(T.clock(n.at)) + '</span></div><div class="muted2">in ' + esc(T.countdown(n.msUntil)) + '</div></a>';
+  }
+  var ICON = {
+    prayer: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    qibla: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 5l3 8-3-1-3 1z"/></svg>',
+    tasbeeh: '<svg viewBox="0 0 24 24"><circle cx="6" cy="8" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="17" cy="15" r="2"/><circle cx="7" cy="15" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+    duas: '<svg viewBox="0 0 24 24"><path d="M4 5h7a3 3 0 013 3v11a2 2 0 00-2-2H4zM20 5h-7a3 3 0 00-3 3v11a2 2 0 012-2h8z"/></svg>',
+    calendar: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>',
+    iman: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"/></svg>',
+    quran: '<svg viewBox="0 0 24 24"><path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11"/></svg>',
+    app: '<svg viewBox="0 0 24 24"><path d="M3 21V10l9-6 9 6v11M9 21v-6h6v6"/></svg>'
+  };
+  var TOOLS = [['prayer', 'Prayer times', '#/prayer'], ['qibla', 'Qibla', '#/qibla'], ['tasbeeh', 'Tasbeeh', '#/tasbeeh'], ['duas', 'Duas', '#/duas'], ['calendar', 'Hijri calendar', '#/calendar'], ['iman', 'Daily prayers', '#/iman'], ['quran', "Qur'an", 'https://quran.com'], ['app', 'Noor-ul-Hasrat app', 'https://noor-ul-hasrat.vercel.app/']];
+  function toolTile(t) { var ext = /^https/.test(t[2]); return '<a class="ttile" href="' + esc(t[2]) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '><i>' + ICON[t[0]] + '</i><span>' + esc(t[1]) + '</span></a>'; }
+
   var R = {
     home: function () {
-      return '<div class="hero"><h1>Every dargah. Every trusted shop.</h1><p>Find a dargah, follow its events, and buy attar, topis and prayer essentials from vendors the community knows.</p><div class="row"><a class="btn" href="#/shop">Browse the shop</a><a class="btn ghost" href="#/join">List your dargah</a></div></div>' + ads('home') +
-        '<h2>Dargahs on the hub</h2><div class="dgl">' + D.dargahs.map(dcard).join('') + '</div>' +
-        '<h2>Fresh in the shop</h2><div class="grid">' + D.products.slice(0, 4).map(card).join('') + '</div><a class="btn ghost full" href="#/shop">See everything in the shop</a>' +
-        '<h2>Join in</h2><div class="who">' +
-        '<a class="tile" href="#/join"><b>Keep a dargah?</b><span>Get a page for your events, photos and videos. Free to start.</span><u>List your dargah</u></a>' +
-        '<a class="tile" href="#/join"><b>Sell something?</b><span>Open a vendor shop and send buyers straight to you.</span><u>Become a vendor</u></a>' +
-        '<a class="tile" href="#/advertise"><b>Want to be seen?</b><span>Sponsor a slot and reach a respectful community.</span><u>See ad slots</u></a></div>';
+      return nextCard() + '<div class="trow">' + TOOLS.slice(0, 6).map(toolTile).join('') + '</div>' + ads('home') +
+        '<div class="sech"><h2>Dargahs</h2><a href="#/dargahs">See all</a></div><div class="dgl">' + D.dargahs.slice(0, 3).map(dcard).join('') + '</div>' +
+        '<div class="sech"><h2>In the shop</h2><a href="#/shop">See all</a></div><div class="hscroll">' + D.products.map(function (p, i) { return card(p, i); }).join('') + '</div>' +
+        '<h2>Join in</h2><div class="who"><a class="tile" href="#/join"><b>Keep a dargah?</b><span>Get a page for your events, photos and videos. Free to start.</span><u>List your dargah</u></a><a class="tile" href="#/join"><b>Sell something?</b><span>Open a vendor shop and send buyers straight to you.</span><u>Become a vendor</u></a></div>';
+    },
+    dargahs: function () { return '<div class="dgl">' + D.dargahs.map(dcard).join('') + '</div><p class="muted">Are you a keeper? <a href="#/join"><b>List your dargah</b></a>.</p>'; },
+    tools: function () { return '<div class="tgrid">' + TOOLS.map(toolTile).join('') + '</div>'; },
+    more: function () {
+      return '<div class="list"><a href="#/join"><span>List your dargah or shop</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
+        '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
     },
     dargah: function (id) {
       var d = D.dargahs.filter(function (x) { return x.id === id; })[0]; if (!d) return nf();
@@ -74,22 +97,34 @@
         '<p class="muted">Prices are set per slot. Ask for the current rate card.</p><a class="btn full" href="mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=Advertise">Ask about advertising</a>';
     }
   };
-  function nf() { return '<h1>Not found</h1><p><a href="#/">Go home</a></p>'; }
+  function nf() { return '<h2>Not found</h2><p><a href="#/">Go home</a></p>'; }
 
+  var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise' };
+  var TAB = { home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more' };
+  var timer = null;
   function route() {
-    var h = (location.hash || '#/').replace(/^#\/?/, '').split('/'), r = h[0], html;
-    if (r === 'd') html = R.dargah(h[1]); else if (r === 'shop') html = R.shop(h[1]); else if (r === 'p') html = R.product(h[1]);
-    else if (r === 'v') html = R.vendor(h[1]); else if (r === 'join') html = R.join(); else if (r === 'advertise') html = R.advertise(); else html = R.home();
-    app.innerHTML = html; window.scrollTo(0, 0);
-    var on = r === 'shop' || r === 'p' || r === 'v' ? 'shop' : r === 'join' || r === 'advertise' ? 'join' : 'home';
-    [].forEach.call(document.querySelectorAll('.top nav a'), function (a) { a.classList.toggle('on', a.getAttribute('data-n') === on); });
+    var h = (location.hash || '#/').replace(/^#\/?/, '').split('/'), r = h[0] || 'home', html, title, bind = null, view = document.createElement('div');
+    clearInterval(timer);
+    if (T && T.screens[r]) { var sc = T.screens[r](); html = sc.html; title = sc.title; bind = sc.bind; }
+    else {
+      var fn = { home: R.home, dargahs: R.dargahs, tools: R.tools, more: R.more, join: R.join, advertise: R.advertise }[r];
+      if (fn) html = fn(); else if (r === 'd') html = R.dargah(h[1]); else if (r === 'shop') html = R.shop(h[1]); else if (r === 'p') html = R.product(h[1]); else if (r === 'v') html = R.vendor(h[1]); else { html = nf(); r = 'home'; }
+      title = TITLES[r];
+    }
+    view.innerHTML = html; app.innerHTML = ''; app.appendChild(view); window.scrollTo(0, 0);
+    var home = r === 'home';
+    document.getElementById('ttl').textContent = home ? D.platform.name : title; document.getElementById('back').hidden = home || ['dargahs', 'shop', 'tools', 'more'].indexOf(r) >= 0;
+    document.getElementById('hj').textContent = T ? T.hijriText() : '';
+    var tab = TAB[r] || 'home'; [].forEach.call(document.querySelectorAll('.nav a'), function (a) { a.classList.toggle('on', a.getAttribute('data-n') === tab); });
+    if (bind) bind(view, route);
+    if (r === 'prayer' || r === 'home') timer = setInterval(function () { if (r === 'home') { var c = view.querySelector('.nextcard'); if (c) c.outerHTML = nextCard(); } else route(); }, 60000);
   }
+  document.getElementById('back').addEventListener('click', function () { if (history.length > 1) history.back(); else location.hash = '#/'; });
   Promise.all([get('data/platform.json'), get('data/dargahs/index.json'), get('data/vendors.json'), get('data/products.json'), get('data/ads.json'), get('data/categories.json')]).then(function (r) {
     D.platform = r[0]; D.vendors = r[2]; D.products = r[3]; D.ads = r[4]; D.categories = r[5];
     return Promise.all(r[1].map(function (id) { return get('data/dargahs/' + id + '.json'); }));
   }).then(function (ds) {
-    D.dargahs = ds; document.title = D.platform.name; document.getElementById('brand').textContent = D.platform.name;
-    document.getElementById('fine').textContent = D.platform.note || ''; route(); window.addEventListener('hashchange', route);
-  }).catch(function () { app.innerHTML = '<h1>Could not load</h1><p class="muted">Check your connection and reload.</p>'; });
+    D.dargahs = ds; document.title = D.platform.name; route(); window.addEventListener('hashchange', route);
+  }).catch(function () { app.innerHTML = '<h2>Could not load</h2><p class="muted">Check your connection and reload.</p>'; });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
 })();
