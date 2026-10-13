@@ -1,6 +1,7 @@
 /* Dargah Hub: a small data-driven site. All content lives in /data (JSON). No tracking, no accounts. */
 (function () {
   'use strict';
+  try { var q = /[?&]theme=(\w+)/.exec(location.search); if (q) localStorage.setItem('hub_theme', q[1]); var th = localStorage.getItem('hub_theme'); if (th && th !== 'default') document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   var app = document.getElementById('app'), D = {}, cache = {};
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function safeUrl(u) { u = String(u || ''); return /^(https:\/\/|http:\/\/|#\/|mailto:)/i.test(u) ? u : ''; }
