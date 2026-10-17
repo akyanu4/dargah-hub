@@ -4,5 +4,8 @@
   "currency": "₹",
   "contact": "akyanu4@gmail.com",
   "whatsapp": "",
-  "note": "Demo data. Replace the sample dargahs, vendors, products and ads with real ones."
+  "note": "Demo data. Replace the sample dargahs, vendors, products and ads with real ones.",
+  "grievance": {
+    "name": "Dargah Hub team"
+  }
 }

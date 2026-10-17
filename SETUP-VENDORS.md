@@ -30,9 +30,17 @@ The site works without this (it shows only the sample data). These steps switch 
 8. **Make yourself an admin.** Open the site, go to `#/sell`, sign in with your own account, then in Firebase **Authentication > Users** copy your User UID. In Firestore create collection `admins`, with a document whose **ID is that UID** (add any field, for example `ok: true`).
 9. Visit `#/admin` to approve vendors. A new vendor appears there as "pending".
 
+## Orders, forms and reports (added 17 Oct 2026)
+These use three more collections, created automatically on first use: `orders`, `leads` (list-a-dargah, advertise and contact forms) and `reports`. They are covered by the same `firestore.rules`, so **re-publish the rules** after pulling this version.
+- Buyers do not sign in. An order is saved in `orders` and opens at `#/order/<id>`. The vendor sees it in the **Orders** tab of `#/sell`. The buyer can also send it to the vendor on WhatsApp from the order page.
+- Admins read form requests and reports at `#/admin` (tabs **Requests** and **Reports**) and can give a vendor the **Verified** badge or hide a reported item.
+- There is no push or email alert for new orders yet. Vendors check the Orders tab, and the WhatsApp button on the order page tells them straight away. Add the Firebase "Trigger Email" extension later if you want email alerts.
+- To cut form and order spam, enable **App Check** (reCAPTCHA v3) in Firebase later. The forms already have a hidden spam field and a short wait between sends.
+- Set your WhatsApp business number in `data/platform.json` (`whatsapp`, with country code and no plus sign) to show a "Chat with us" button on the forms.
+
 ## How it works
 - A vendor signs up, creates a profile (either "I already have a shop" with a link, or "I do not have a shop"), and waits for approval.
-- Once approved they can add items (name, category, price, description, one photo). Photos are resized on the phone and kept inside the item record, so no paid storage is needed.
+- Once approved they can add items (name, category, price, description, up to three photos, sold-out switch). Photos are resized on the phone and kept inside the item record, so no paid storage is needed.
 - Anyone can read approved vendors and items. A vendor can only change their own. Only admins can approve.
 - Pausing a vendor from `#/admin` hides them and their items from the site.
 

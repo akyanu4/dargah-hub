@@ -103,3 +103,17 @@ html{background:var(--page,var(--bg))}
 .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 
 .art.ph:before,.art.ph:after{display:none}
+
+/* cart, orders, tabs, forms */
+.cartb{position:relative;display:flex;align-items:center;justify-content:center;width:40px;height:40px;color:#fff;text-decoration:none;flex:none}
+.cartb svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cartb span{position:absolute;top:2px;right:0;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--amber);color:#fff;font:700 11px/18px Inter,sans-serif;text-align:center}.cartb span[hidden]{display:none}
+.cl{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}.cl:last-child{border-bottom:0}.cl .cb{flex:1;min-width:0}.cl .ct{font-weight:600;white-space:nowrap}.cl.tot{border-top:2px solid var(--line);border-bottom:0;margin-top:4px}
+.qty{display:flex;align-items:center;gap:8px;margin-top:6px}.qty button{min-width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 18px/1 Inter,sans-serif;cursor:pointer}.qty span{min-width:22px;text-align:center;font-weight:600}.qty .lnk{border:0;background:none;font:500 14px Inter,sans-serif;color:var(--amber-d);text-decoration:underline;margin-left:6px;min-width:0;padding:0 4px}
+.tabs{display:flex;gap:6px;margin:14px 0;border-bottom:1px solid var(--line)}.tabs button{flex:1;padding:12px 8px;border:0;border-bottom:3px solid transparent;background:none;color:var(--muted);font:600 15px Inter,sans-serif;cursor:pointer}.tabs button.on{color:var(--ink);border-bottom-color:var(--amber)}
+.cnt{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--amber);color:#fff;font-size:12px;line-height:20px;text-align:center}
+.oc.newo{border-left:4px solid var(--amber)}.mr{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.mr .btn{margin:0}
+.phs{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0}.pvw{position:relative}.pvw .pv{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line);display:block}.pvw button{position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;border:0;background:var(--night);color:#fff;font:700 16px/1 Inter,sans-serif;cursor:pointer}
+.gal.th{margin-top:10px;grid-template-columns:repeat(3,1fr)}
+select#rr,select#as{display:block;width:100%;margin-top:4px}
+.btn[disabled]{opacity:.6;cursor:default}

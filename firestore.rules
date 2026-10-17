@@ -1,13 +1,13 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Anonymous sign-ins (used by the Noor app in the same project) are never accepted here.
+    // Anonymous sign-ins (used by the Noor app in the same project) are never accepted for accounts here.
     function signedIn() { return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
     function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
-    function approvedVendor(uid) { return get(/databases/$(database)/documents/vendors/$(uid)).data.status == 'approved'; }
+    function approvedVendor(uid) { return exists(/databases/$(database)/documents/vendors/$(uid)) && get(/databases/$(database)/documents/vendors/$(uid)).data.status == 'approved'; }
 
     function okVendor(d) {
-      return d.keys().hasOnly(['name','city','about','type','shopUrl','whatsapp','phone','contactEmail','status','updatedAt'])
+      return d.keys().hasOnly(['name','city','about','type','shopUrl','whatsapp','phone','contactEmail','delivery','verified','status','updatedAt'])
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
         && d.city is string && d.city.size() <= 60
         && d.about is string && d.about.size() <= 500
@@ -15,17 +15,59 @@ service cloud.firestore {
         && d.shopUrl is string && d.shopUrl.size() <= 300
         && d.whatsapp is string && d.whatsapp.size() <= 20
         && d.phone is string && d.phone.size() <= 30
-        && d.contactEmail is string && d.contactEmail.size() <= 120;
+        && d.contactEmail is string && d.contactEmail.size() <= 120
+        && d.get('delivery', '') is string && d.get('delivery', '').size() <= 200;
     }
     function okProduct(d) {
-      return d.keys().hasOnly(['vendorId','name','cat','price','desc','img','buy','hidden','updatedAt'])
+      return d.keys().hasOnly(['vendorId','name','cat','price','desc','img','imgs','buy','hidden','soldOut','updatedAt'])
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
         && d.cat is string && d.cat.size() >= 1 && d.cat.size() <= 40
         && d.price is number && d.price >= 0 && d.price < 10000000
         && d.desc is string && d.desc.size() <= 500
         && d.img is string && d.img.size() <= 140000
+        && d.get('imgs', []) is list && d.get('imgs', []).size() <= 3
+        && (d.get('imgs', []).size() < 1 || d.get('imgs', [])[0].size() <= 140000)
+        && (d.get('imgs', []).size() < 2 || d.get('imgs', [])[1].size() <= 140000)
+        && (d.get('imgs', []).size() < 3 || d.get('imgs', [])[2].size() <= 140000)
         && d.buy is string && d.buy.size() <= 300
-        && d.hidden is bool;
+        && d.hidden is bool
+        && d.get('soldOut', false) is bool;
+    }
+    function okOrder(d) {
+      return d.keys().hasOnly(['vendorId','vendorName','buyerName','buyerPhone','buyerAddress','note','items','total','status','createdAt'])
+        && d.vendorId is string && d.vendorId.size() > 0 && d.vendorId.size() <= 128
+        && d.vendorName is string && d.vendorName.size() <= 80
+        && d.buyerName is string && d.buyerName.size() >= 2 && d.buyerName.size() <= 80
+        && d.buyerPhone is string && d.buyerPhone.size() >= 8 && d.buyerPhone.size() <= 20
+        && d.buyerAddress is string && d.buyerAddress.size() >= 5 && d.buyerAddress.size() <= 300
+        && d.note is string && d.note.size() <= 300
+        && d.items is list && d.items.size() >= 1 && d.items.size() <= 20
+        && d.total is number && d.total >= 0 && d.total < 100000000
+        && d.status == 'new'
+        && d.createdAt == request.time;
+    }
+    function okLead(d) {
+      return d.keys().hasOnly(['kind','name','city','phone','email','slot','message','status','createdAt'])
+        && d.kind in ['dargah','advertise','contact']
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        && d.city is string && d.city.size() <= 60
+        && d.phone is string && d.phone.size() <= 30
+        && d.email is string && d.email.size() <= 120
+        && d.slot is string && d.slot.size() <= 40
+        && d.message is string && d.message.size() <= 1000
+        && d.status == 'new'
+        && d.createdAt == request.time;
+    }
+    function okReport(d) {
+      return d.keys().hasOnly(['targetType','targetId','targetName','reason','details','contact','status','createdAt'])
+        && d.targetType in ['p','v','d','o']
+        && d.targetId is string && d.targetId.size() <= 60
+        && d.targetName is string && d.targetName.size() <= 120
+        && d.reason is string && d.reason.size() <= 60
+        && d.details is string && d.details.size() >= 5 && d.details.size() <= 1000
+        && d.contact is string && d.contact.size() <= 120
+        && d.status == 'new'
+        && d.createdAt == request.time;
     }
 
     // Admins are added by hand in the Firebase console (a document whose id is the admin's user id).
@@ -36,8 +78,8 @@ service cloud.firestore {
 
     match /vendors/{uid} {
       allow read: if resource.data.status == 'approved' || (signedIn() && request.auth.uid == uid) || isAdmin();
-      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.status == 'pending' && okVendor(request.resource.data);
-      allow update: if (signedIn() && request.auth.uid == uid && request.resource.data.status == resource.data.status && okVendor(request.resource.data)) || isAdmin();
+      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.status == 'pending' && !('verified' in request.resource.data) && okVendor(request.resource.data);
+      allow update: if (signedIn() && request.auth.uid == uid && request.resource.data.status == resource.data.status && request.resource.data.get('verified', false) == resource.data.get('verified', false) && okVendor(request.resource.data)) || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -46,6 +88,29 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data);
       allow update: if (signedIn() && resource.data.vendorId == request.auth.uid && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data)) || isAdmin();
       allow delete: if (signedIn() && resource.data.vendorId == request.auth.uid) || isAdmin();
+    }
+
+    // Order requests. Buyers do not sign in. An order is read by its long random id (the buyer keeps the link);
+    // listing orders is only possible for the vendor it belongs to, and for admins.
+    match /orders/{id} {
+      allow get: if true;
+      allow list: if signedIn() && (resource.data.vendorId == request.auth.uid || isAdmin());
+      allow create: if okOrder(request.resource.data) && approvedVendor(request.resource.data.vendorId);
+      allow update: if signedIn() && (resource.data.vendorId == request.auth.uid || isAdmin())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','vendorNote','updatedAt'])
+        && request.resource.data.status in ['new','confirmed','shipped','delivered','cancelled']
+        && request.resource.data.get('vendorNote', '') is string && request.resource.data.get('vendorNote', '').size() <= 300;
+      allow delete: if isAdmin();
+    }
+
+    // Requests from the public forms (list a dargah, advertise, contact) and reports. Anyone may send; only admins read.
+    match /leads/{id} {
+      allow create: if okLead(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+    match /reports/{id} {
+      allow create: if okReport(request.resource.data);
+      allow read, update, delete: if isAdmin();
     }
   }
 }

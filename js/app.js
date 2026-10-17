@@ -55,7 +55,7 @@
     dargahs: function () { return '<div class="dgl">' + D.dargahs.map(dcard).join('') + '</div><p class="muted">Are you a keeper? <a href="#/join"><b>List your dargah</b></a>.</p>'; },
     tools: function () { return '<div class="tgrid">' + TOOLS.map(toolTile).join('') + '</div>'; },
     more: function () {
-      return '<div class="list"><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
+      return '<div class="list"><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
         '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
     },
     dargah: function (id) {
@@ -87,26 +87,34 @@
         (photos.length ? '<h2>Photos</h2><div class="gal">' + photos.map(function (g) { return '<a class="gi" href="' + esc(g.src) + '" data-lb="' + esc(g.src) + '" data-cap="' + esc(g.caption) + '"><img loading="lazy" alt="' + esc(g.caption) + '" src="' + esc(g.src) + '"></a>'; }).join('') + '</div>' : '') +
         (d.videos && d.videos.length ? '<h2>Videos</h2>' + d.videos.filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id || ''); }).map(function (v) { return '<div class="box"><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + esc(v.id) + '">▶ ' + esc(v.title) + '</a></div>'; }).join('') : '') +
         (d.sources && d.sources.length ? '<h2>Sources</h2><div class="box muted">' + d.sources.map(function (x) { var u = safeUrl(x.url); return u ? '<div><a target="_blank" rel="noopener" href="' + esc(u) + '">' + esc(x.title) + '</a></div>' : ''; }).join('') + '</div>' : '') +
-        '<p class="muted">' + (d.updated ? 'Last updated ' + esc(d.updated) + '. ' : '') + 'Something wrong or out of date? <a href="mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=' + encodeURIComponent('Correction: ' + d.name) + '"><b>Tell us</b></a>.</p>';
+        '<p class="muted">' + (d.updated ? 'Last updated ' + esc(d.updated) + '. ' : '') + 'Something wrong or out of date? <a href="#/report/d/' + esc(d.id) + '"><b>Tell us</b></a>.</p>';
     },
     shop: function (cat) {
       var known = D.categories.map(function (c) { return c.id; }), cats = D.categories.filter(function (c) { return D.products.some(function (p) { return p.cat === c.id; }); });
       D.products.forEach(function (p) { if (p.cat && known.indexOf(p.cat) < 0 && !cats.some(function (c) { return c.id === p.cat; })) cats.push({ id: p.cat, name: catName(p.cat) }); });
       var list = D.products.filter(function (p) { return !cat || p.cat === cat; });
-      return '<h1>The shop</h1><p class="muted">Independent vendors sell here, from attar and books to food, clothing and gifts. ' + esc(D.platform.name) + ' does not take payment or deliver: you buy straight from the vendor.</p><input class="search" id="q" type="search" placeholder="Search products and vendors" aria-label="Search the shop">' + ads('shop') +
+      return '<h1>The shop</h1><p class="muted">Independent vendors sell here, from attar and books to food, clothing and gifts. ' + esc(D.platform.name) + ' does not take payment or deliver: you send an order request and pay the vendor directly.</p><input class="search" id="q" type="search" placeholder="Search products and vendors" aria-label="Search the shop">' + ads('shop') +
         '<div class="chips"><a class="chip' + (!cat ? ' on' : '') + '" href="#/shop">All</a>' + cats.map(function (c) { return '<a class="chip' + (cat === c.id ? ' on' : '') + '" href="#/shop/' + esc(c.id) + '">' + esc(c.name) + '</a>'; }).join('') + '</div>' +
         '<div id="plist">' + shopGrid(list) + '</div><h2>Vendors</h2><div class="list">' + D.vendors.map(function (v) { return '<a href="#/v/' + esc(v.id) + '"><span>' + esc(v.name) + '<br><small class="muted">' + esc(v.city) + '</small></span><i>›</i></a>'; }).join('') + '</div><p class="muted">Sell something different? <a href="#/sell"><b>Sell on the hub</b></a>. Any kind of halal product or service is welcome.</p>';
     },
     product: function (id) {
-      var p = D.products.filter(function (x) { return x.id === id; })[0]; if (!p) return nf(); var v = vendor(p.vendor), b = safeUrl(p.buy), i0 = D.products.indexOf(p);
-      return '<p><a href="#/shop"><b>‹ Back to the shop</b></a></p><div class="pcard"><div class="card">' + art(p, i0) + '</div><div><h1>' + esc(p.name) + '</h1><div>' + sampleTag(p) + '</div><span class="price" style="font-size:22px;padding:3px 14px">' + money(p.price) + '</span><p>' + esc(p.desc) + '</p>' +
-        (v ? '<div class="box">Sold by <a href="#/v/' + esc(v.id) + '"><b>' + esc(v.name) + '</b></a> ' + verTag(v) + '<div class="muted">' + esc(v.city) + '</div></div>' : '') +
-        (b ? '<a class="btn full" target="_blank" rel="noopener" href="' + esc(b) + '">Buy from the vendor</a>' : '<div class="box muted">This is a sample product with no buy link. A real listing sends buyers to the vendor\'s own page or WhatsApp.</div>') +
-        '<p class="muted">The vendor sells and delivers. Check the product and return terms with them before you pay.</p></div></div>';
+      var p = D.products.filter(function (x) { return x.id === id; })[0]; if (!p) return nf(); var v = vendor(p.vendor), i0 = D.products.indexOf(p), wa = v ? String(v.whatsapp || '').replace(/\D/g, '') : '';
+      var thumbs = (p.imgs || []).length > 1 ? '<div class="gal th">' + p.imgs.map(function (g, k) { return '<a class="gi" href="' + esc(g) + '" data-lb="' + esc(g) + '" data-cap="' + esc(p.name) + '"><img loading="lazy" alt="' + esc(p.name) + ' photo ' + (k + 1) + '" src="' + esc(g) + '"></a>'; }).join('') + '</div>' : '';
+      var buy = '';
+      if (p.live) {
+        buy = p.soldOut ? '<div class="box"><b>Sold out</b><div class="muted">The vendor has marked this item as unavailable right now.</div></div>' :
+          '<button class="btn full" type="button" data-add="' + esc(p.id) + '">Add to cart</button><a class="btn ghost full" href="#/cart">View cart and order</a>' +
+          (p.ext ? '<a class="btn ghost full" target="_blank" rel="noopener" href="' + esc(p.ext) + '">Buy on the vendor\'s own site</a>' : '') +
+          '<p class="muted">You send an order request. The vendor confirms availability and any delivery charge, then you pay the vendor directly. ' + esc(D.platform.name) + ' does not take payment.</p>';
+      } else buy = '<div class="box muted">This is a sample product and cannot be ordered. Real vendor items can be ordered from the cart.</div>';
+      return '<p><a href="#/shop"><b>‹ Back to the shop</b></a></p><div class="pcard"><div><div class="card">' + art(p, i0) + '</div>' + thumbs + '</div><div><h1>' + esc(p.name) + '</h1><div>' + sampleTag(p) + '</div><span class="price" style="font-size:22px;padding:3px 14px">' + money(p.price) + '</span><p>' + esc(p.desc) + '</p>' +
+        (v ? '<div class="box">Sold by <a href="#/v/' + esc(v.id) + '"><b>' + esc(v.name) + '</b></a> ' + verTag(v) + '<div class="muted">' + esc(v.city) + '</div>' + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' : '') + buy +
+        (wa && p.live ? '<a class="btn ghost full" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '?text=' + encodeURIComponent('Hi, I have a question about "' + p.name + '" on ' + D.platform.name + '.') + '">Ask the vendor on WhatsApp</a>' : '') +
+        '<p class="muted">The vendor sells and delivers. Check the product and return terms with them before you pay. <a href="#/report/p/' + esc(p.raw || p.id) + '">Report this item</a></p></div></div>';
     },
     vendor: function (id) {
       var v = vendor(id); if (!v) return nf();
-      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + '</div>' + vendorActs(v) + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>';
+      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a></p>' : '');
     },
     join: function () {
       var mail = 'mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=';
@@ -127,12 +135,12 @@
   function merge(live) {
     if (!STATIC) STATIC = { v: D.vendors.slice(), p: D.products.slice(), c: D.categories.map(function (c) { return { id: c.id, name: c.name }; }) };
     D.vendors = STATIC.v.slice(); D.products = STATIC.p.slice(); D.categories = STATIC.c.map(function (c) { return { id: c.id, name: c.name }; }); liveAt = Date.now();
-    live.vendors.forEach(function (v) { if (D.vendors.some(function (x) { return x.id === v.id; })) return; D.vendors.push({ id: v.id, name: v.name, city: v.city, about: v.about, type: v.type, shopUrl: v.shopUrl, whatsapp: v.whatsapp, phone: v.phone, verified: true, live: true }); });
+    live.vendors.forEach(function (v) { if (D.vendors.some(function (x) { return x.id === v.id; })) return; D.vendors.push({ id: v.id, name: v.name, city: v.city, about: v.about, type: v.type, shopUrl: v.shopUrl, whatsapp: v.whatsapp, phone: v.phone, verified: !!v.verified, delivery: v.delivery || '', contactEmail: v.contactEmail || '', live: true }); });
     live.products.forEach(function (p) {
       var v = vendor(p.vendorId), c = slug(p.cat); if (!v) return;
       if (!D.categories.some(function (x) { return x.id === c; })) D.categories.push({ id: c, name: String(p.cat).trim() });
       var buy = safeUrl(p.buy) || (v.whatsapp ? 'https://wa.me/' + String(v.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent('Hi, I saw "' + p.name + '" on ' + D.platform.name + ' and I am interested.') : '') || safeUrl(v.shopUrl);
-      D.products.push({ id: 'f-' + p.id, vendor: v.id, name: p.name, cat: c, price: p.price, desc: p.desc || '', img: p.img, buy: buy, live: true });
+      D.products.push({ id: 'f-' + p.id, raw: p.id, vendor: v.id, name: p.name, cat: c, price: p.price, desc: p.desc || '', img: p.img || (p.imgs && p.imgs[0]) || '', imgs: Array.isArray(p.imgs) ? p.imgs : [], soldOut: !!p.soldOut, ext: safeUrl(p.buy), buy: buy, live: true });
     });
   }
   function vendorActs(v) {
@@ -144,8 +152,8 @@
   }
   function nf() { return '<h2>Not found</h2><p><a href="#/">Go home</a></p>'; }
 
-  var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise' };
-  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more' };
+  var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise', cart: 'Cart' };
+  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more' };
   var timer = null;
   document.addEventListener('input', function (e) {
     if (!e.target || e.target.id !== 'q') return; var q = e.target.value.trim().toLowerCase(), box = document.getElementById('plist'); if (!box) return;
@@ -160,12 +168,12 @@
   });
   function route() {
     var rr = (location.hash || '#/').replace(/^#\/?/, '').split('/')[0];
-    if (window.HubDB && HubDB.mode !== 'off' && STATIC && Date.now() - liveAt > 15000 && ['', 'shop', 'p', 'v', 'sell'].indexOf(rr) >= 0 && !route.busy) { route.busy = true; HubDB.live().then(merge).catch(function () {}).then(function () { route.busy = false; liveAt = Date.now(); route(); }); return; }
+    if (window.HubDB && HubDB.mode !== 'off' && STATIC && Date.now() - liveAt > 15000 && ['', 'shop', 'p', 'v', 'sell', 'cart', 'order', 'orders'].indexOf(rr) >= 0 && !route.busy) { route.busy = true; HubDB.live().then(merge).catch(function () {}).then(function () { route.busy = false; liveAt = Date.now(); route(); }); return; }
     var h = (location.hash || '#/').replace(/^#\/?/, '').split('/'), r = h[0] || 'home', html, title, bind = null, view = document.createElement('div');
     clearInterval(timer);
     var HS = window.HubScreens || {};
     if (T && T.screens[r]) { var sc = T.screens[r](); html = sc.html; title = sc.title; bind = sc.bind; }
-    else if (HS[r]) { var sc2 = HS[r](); html = sc2.html; title = sc2.title; bind = sc2.bind; }
+    else if (HS[r]) { var sc2 = HS[r](h[1], h[2]); html = sc2.html; title = sc2.title; bind = sc2.bind; }
     else {
       var fn = { home: R.home, dargahs: R.dargahs, tools: R.tools, more: R.more, join: R.join, advertise: R.advertise }[r];
       if (fn) html = fn(); else if (r === 'd') html = R.dargah(h[1]); else if (r === 'shop') html = R.shop(h[1]); else if (r === 'p') html = R.product(h[1]); else if (r === 'v') html = R.vendor(h[1]); else { html = nf(); r = 'home'; }
@@ -184,8 +192,9 @@
     D.platform = r[0]; D.vendors = r[2]; D.products = r[3]; D.ads = r[4]; D.categories = r[5];
     return Promise.all(r[1].map(function (id) { return get('data/dargahs/' + id + '.json'); }));
   }).then(function (ds) {
-    D.dargahs = ds; document.title = D.platform.name; route(); window.addEventListener('hashchange', route);
-    window.HubApp = { stale: function () { liveAt = 0; }, cats: function () { return D.categories.map(function (c) { return c.name; }); } };
+    D.dargahs = ds; document.title = D.platform.name;
+    window.HubApp = { stale: function () { liveAt = 0; }, cats: function () { return D.categories.map(function (c) { return c.name; }); }, D: function () { return D; }, esc: esc, money: money, vendor: vendor, safeUrl: safeUrl, route: route };
+    route(); window.addEventListener('hashchange', route);
     if (window.HubDB && HubDB.mode !== 'off') return HubDB.live().then(merge).then(function () { route(); }).catch(function () {});
   }).catch(function () { app.innerHTML = '<h2>Could not load</h2><p class="muted">Check your connection and reload.</p>'; });
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});

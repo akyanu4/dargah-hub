@@ -5,6 +5,9 @@ A separate, data-driven platform: dargah spaces, a vendor shop, sponsored slots 
 ## Vendors add their own items
 Vendors sign in at `#/sell`, either list an existing shop (link out) or create a shop here with items and photos. An admin approves them at `#/admin`. This needs Firebase: follow `SETUP-VENDORS.md`. Until then the site shows only the sample data.
 
+## Buying and selling
+Buyers add vendor items to a cart and send an order request (no account, no payment). Each vendor receives its own order in `#/sell` and updates its status. Payment and delivery happen directly between buyer and vendor. See `SETUP-VENDORS.md`.
+
 ## Run locally
 `python3 -m http.server 8000` then open http://localhost:8000
 
@@ -27,4 +30,4 @@ Edit `data/ads.json`. Slots: `home`, `shop`. Every ad is shown with a "Sponsored
 3. Point your own domain at it in Vercel > Domains.
 
 ## Before launch
-Replace demo data, review `privacy.html` and `terms.html` with a lawyer, set `contact` in `data/platform.json`, and add a vendor payment process for listing fees.
+Replace demo data, review `privacy.html` and `terms.html` with a lawyer, set `contact` in `data/platform.json`, and add a vendor payment process for listing fees (not built).

@@ -13,7 +13,7 @@
   function mockStore() { try { return JSON.parse(localStorage.getItem('hub_mock') || '{}'); } catch (e) { return {}; } }
   function mockSave(s) { try { localStorage.setItem('hub_mock', JSON.stringify(s)); } catch (e) {} }
   function mockImpl() {
-    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.user = s.user || null;
+    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.user = s.user || null;
     function save() { mockSave(s); }
     api.user = s.user; var im = {};
     im.signIn = function (email) { s.user = { uid: 'u_' + email.replace(/\W/g, ''), email: email }; api.user = s.user; save(); emit(); return Promise.resolve(); };
@@ -30,6 +30,20 @@
     im.live = function () { var vs = Object.keys(s.vendors).map(function (k) { return s.vendors[k]; }).filter(function (v) { return v.status === 'approved'; }); var ok = {}; vs.forEach(function (v) { ok[v.id] = 1; }); return Promise.resolve({ vendors: vs, products: Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }) }); };
     im.adminVendors = function () { return Promise.resolve(Object.keys(s.vendors).map(function (k) { return s.vendors[k]; })); };
     im.adminSetStatus = function (uid, st) { s.vendors[uid].status = st; save(); return Promise.resolve(); };
+    function list(o) { return Object.keys(o).map(function (k) { return o[k]; }); }
+    function nid(p) { return p + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36); }
+    im.createOrders = function (arr) { var ids = arr.map(function (o) { var id = nid('o'); s.orders[id] = Object.assign({}, o, { id: id, status: 'new', createdAt: Date.now() }); return id; }); save(); return Promise.resolve(ids); };
+    im.getOrder = function (id) { return Promise.resolve(s.orders[id] || null); };
+    im.vendorOrders = function () { return Promise.resolve(list(s.orders).filter(function (o) { return o.vendorId === s.user.uid; })); };
+    im.setOrderStatus = function (id, st, note) { s.orders[id].status = st; if (note != null) s.orders[id].vendorNote = note; save(); return Promise.resolve(); };
+    im.createLead = function (o) { var id = nid('l'); s.leads[id] = Object.assign({}, o, { id: id, status: 'new', createdAt: Date.now() }); save(); return Promise.resolve(id); };
+    im.createReport = function (o) { var id = nid('r'); s.reports[id] = Object.assign({}, o, { id: id, status: 'new', createdAt: Date.now() }); save(); return Promise.resolve(id); };
+    im.adminLeads = function () { return Promise.resolve(list(s.leads)); };
+    im.adminReports = function () { return Promise.resolve(list(s.reports)); };
+    im.adminSetLead = function (id, st) { s.leads[id].status = st; save(); return Promise.resolve(); };
+    im.adminSetReport = function (id, st) { s.reports[id].status = st; save(); return Promise.resolve(); };
+    im.adminSetVerified = function (uid, v) { s.vendors[uid].verified = !!v; save(); return Promise.resolve(); };
+    im.adminHideProduct = function (id) { if (s.products[id]) s.products[id].hidden = true; save(); return Promise.resolve(); };
     return im;
   }
 
@@ -56,7 +70,7 @@
     im.signOut = function () { return boot().then(function (x) { return x.au.signOut(auth); }); };
     im.isAdmin = function () { return boot().then(function (x) { if (!auth.currentUser) return false; return x.fs.getDoc(x.fs.doc(db, 'admins', auth.currentUser.uid)).then(function (d) { return d.exists(); }).catch(function () { return false; }); }); };
     im.myVendor = function () { return boot().then(function (x) { return x.fs.getDoc(x.fs.doc(db, 'vendors', auth.currentUser.uid)).then(function (d) { return d.exists() ? Object.assign({ id: d.id }, d.data()) : null; }); }); };
-    im.saveVendor = function (d) { return boot().then(function (x) { var ref = x.fs.doc(db, 'vendors', auth.currentUser.uid); return x.fs.getDoc(ref).then(function (old) { var data = strip(Object.assign({}, d, { updatedAt: x.fs.serverTimestamp() })); data.status = old.exists() ? old.data().status : 'pending'; return x.fs.setDoc(ref, data); }); }); };
+    im.saveVendor = function (d) { return boot().then(function (x) { var ref = x.fs.doc(db, 'vendors', auth.currentUser.uid); return x.fs.getDoc(ref).then(function (old) { var data = strip(Object.assign({}, d, { updatedAt: x.fs.serverTimestamp() })); data.status = old.exists() ? old.data().status : 'pending'; if (old.exists() && old.data().verified !== undefined) data.verified = old.data().verified; return x.fs.setDoc(ref, data); }); }); };
     im.myProducts = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'products'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); }); }); };
     im.saveProduct = function (d) { return boot().then(function (x) { var data = strip(Object.assign({}, d, { vendorId: auth.currentUser.uid, updatedAt: x.fs.serverTimestamp() })); delete data.id; if (d.id) return x.fs.setDoc(x.fs.doc(db, 'products', d.id), data).then(function () { return d.id; }); return x.fs.addDoc(x.fs.collection(db, 'products'), data).then(function (r) { return r.id; }); }); };
     im.deleteProduct = function (id) { return boot().then(function (x) { return x.fs.deleteDoc(x.fs.doc(db, 'products', id)); }); };
@@ -70,11 +84,25 @@
     };
     im.adminVendors = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'vendors')).then(function (q) { return q.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); }); }); };
     im.adminSetStatus = function (uid, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'vendors', uid), { status: st }); }); };
+    function ms(v) { return v && v.toMillis ? v.toMillis() : v; }
+    function ord(d) { var o = Object.assign({ id: d.id }, d.data()); o.createdAt = ms(o.createdAt); return o; }
+    im.createOrders = function (arr) { return boot().then(function (x) { return Promise.all(arr.map(function (o) { return x.fs.addDoc(x.fs.collection(db, 'orders'), Object.assign({}, o, { status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); })); }); };
+    im.getOrder = function (id) { return boot().then(function (x) { return x.fs.getDoc(x.fs.doc(db, 'orders', id)).then(function (d) { return d.exists() ? ord(d) : null; }); }); };
+    im.vendorOrders = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'orders'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(ord); }); }); };
+    im.setOrderStatus = function (id, st, note) { return boot().then(function (x) { var u = { status: st, updatedAt: x.fs.serverTimestamp() }; if (note != null) u.vendorNote = note; return x.fs.updateDoc(x.fs.doc(db, 'orders', id), u); }); };
+    im.createLead = function (o) { return boot().then(function (x) { return x.fs.addDoc(x.fs.collection(db, 'leads'), Object.assign({}, o, { status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
+    im.createReport = function (o) { return boot().then(function (x) { return x.fs.addDoc(x.fs.collection(db, 'reports'), Object.assign({}, o, { status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
+    im.adminLeads = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'leads')).then(function (q) { return q.docs.map(ord); }); }); };
+    im.adminReports = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'reports')).then(function (q) { return q.docs.map(ord); }); }); };
+    im.adminSetLead = function (id, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'leads', id), { status: st }); }); };
+    im.adminSetReport = function (id, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'reports', id), { status: st }); }); };
+    im.adminSetVerified = function (uid, v) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'vendors', uid), { verified: !!v }); }); };
+    im.adminHideProduct = function (id) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'products', id), { hidden: true }); }); };
     return im;
   }
 
   var impl = api.mode === 'firebase' ? fbImpl() : api.mode === 'mock' ? mockImpl() : null;
-  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus'].forEach(function (k) {
+  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct'].forEach(function (k) {
     api[k] = function () { return impl && impl[k] ? impl[k].apply(null, arguments) : Promise.reject(new Error('Vendor accounts are not switched on yet.')); };
   });
   if (impl && impl.init) impl.init().catch(function () {});
