@@ -68,6 +68,7 @@
       if (wa) acts += '<a class="act" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '"><i>💬</i>WhatsApp</a>';
       if (hasGeo) acts += '<a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + d.lat + ',' + d.lon + '"><i>🧭</i>Directions</a>';
       else if (m) acts += '<a class="act" target="_blank" rel="noopener" href="' + esc(m) + '"><i>🧭</i>Map</a>';
+      else if (d.address || d.name) acts += '<a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((d.name || '') + ', ' + (d.address || d.city || '')) + '"><i>🧭</i>Find on map</a>';
       if (window.HubEngage) acts += HubEngage.followBtn('d', d.id);
       acts += '<button class="act" type="button" id="shr" data-t="' + esc(d.name) + '" data-x="' + esc(window.HubEngage ? HubEngage.dargahShare(d) : d.name) + '"><i>↗</i>Share</button>';
       var info = '';
