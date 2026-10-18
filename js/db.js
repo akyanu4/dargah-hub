@@ -13,7 +13,7 @@
   function mockStore() { try { return JSON.parse(localStorage.getItem('hub_mock') || '{}'); } catch (e) { return {}; } }
   function mockSave(s) { try { localStorage.setItem('hub_mock', JSON.stringify(s)); } catch (e) {} }
   function mockImpl() {
-    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.dargahs = s.dargahs || {}; s.claims = s.claims || {}; s.offers = s.offers || {}; s.user = s.user || null;
+    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.dargahs = s.dargahs || {}; s.claims = s.claims || {}; s.offers = s.offers || {}; s.redemptions = s.redemptions || {}; s.user = s.user || null;
     function save() { mockSave(s); }
     api.user = s.user; var im = {};
     im.signIn = function (email) { s.user = { uid: 'u_' + email.replace(/\W/g, ''), email: email }; api.user = s.user; save(); emit(); return Promise.resolve(); };
@@ -37,6 +37,11 @@
     im.vendorOrders = function () { return Promise.resolve(list(s.orders).filter(function (o) { return o.vendorId === s.user.uid; })); };
     im.setOrderStatus = function (id, st, note) { s.orders[id].status = st; if (note != null) s.orders[id].vendorNote = note; save(); return Promise.resolve(); };
     function weekOf() { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate() - ((t.getDay() + 3) % 7), 12); function k(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); } return [k(t), k(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7, 12))]; }
+    im.claimOffer = function (o, code) { if (s.redemptions[code]) return Promise.reject(new Error('code-taken')); s.redemptions[code] = { id: code, offerId: o.id, vendorId: o.vendorId, week: o.week, status: 'issued', createdAt: Date.now() }; save(); return Promise.resolve({ code: code }); };
+    im.getRedemption = function (code) { return Promise.resolve(s.redemptions[code] || null); };
+    im.vendorRedemptions = function () { return Promise.resolve(list(s.redemptions).filter(function (r) { return r.vendorId === s.user.uid; })); };
+    im.redeemCode = function (code) { var r = s.redemptions[code]; if (!r) return Promise.reject(new Error('Code not found.')); if (r.status !== 'issued') return Promise.reject(new Error('Already used.')); r.status = 'redeemed'; r.redeemedAt = Date.now(); save(); return Promise.resolve(); };
+    im.adminRedemptions = function () { return Promise.resolve(list(s.redemptions)); };
     im.idToken = function () { return Promise.resolve('mock'); };
     im.myOffers = function () { return Promise.resolve(list(s.offers).filter(function (o) { return o.vendorId === s.user.uid; })); };
     im.saveOffer = function (d) { var id = d.id || nid('o'), old = s.offers[id]; if (old && old.status !== 'pending') return Promise.reject(new Error('Only offers waiting for approval can be edited.')); s.offers[id] = Object.assign({}, old || {}, { title: d.title, details: d.details, discount: d.discount, week: d.week }, { id: id, vendorId: s.user.uid, status: 'pending', createdAt: old ? old.createdAt : Date.now() }); save(); return Promise.resolve(id); };
@@ -107,12 +112,17 @@
     im.adminVendors = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'vendors')).then(function (q) { return q.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); }); }); };
     im.adminSetStatus = function (uid, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'vendors', uid), { status: st }); }); };
     function ms(v) { return v && v.toMillis ? v.toMillis() : v; }
-    function ord(d) { var o = Object.assign({ id: d.id }, d.data()); o.createdAt = ms(o.createdAt); return o; }
+    function ord(d) { var o = Object.assign({ id: d.id }, d.data()); o.createdAt = ms(o.createdAt); o.redeemedAt = ms(o.redeemedAt); return o; }
     im.createOrders = function (arr) { return boot().then(function (x) { return Promise.all(arr.map(function (o) { return x.fs.addDoc(x.fs.collection(db, 'orders'), Object.assign({}, o, { status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); })); }); };
     im.getOrder = function (id) { return boot().then(function (x) { return x.fs.getDoc(x.fs.doc(db, 'orders', id)).then(function (d) { return d.exists() ? ord(d) : null; }); }); };
     im.vendorOrders = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'orders'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(ord); }); }); };
     im.setOrderStatus = function (id, st, note) { return boot().then(function (x) { var u = { status: st, updatedAt: x.fs.serverTimestamp() }; if (note != null) u.vendorNote = note; return x.fs.updateDoc(x.fs.doc(db, 'orders', id), u); }); };
     function weekOf() { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate() - ((t.getDay() + 3) % 7), 12); function k(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); } return [k(t), k(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7, 12))]; }
+    im.claimOffer = function (o, code) { return boot().then(function (x) { return x.fs.setDoc(x.fs.doc(db, 'redemptions', code), { offerId: o.id, vendorId: o.vendorId, week: o.week, status: 'issued', createdAt: x.fs.serverTimestamp() }).then(function () { return { code: code }; }); }); };
+    im.getRedemption = function (code) { return boot().then(function (x) { return x.fs.getDoc(x.fs.doc(db, 'redemptions', code)).then(function (d) { return d.exists() ? ord(d) : null; }); }); };
+    im.vendorRedemptions = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'redemptions'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(ord); }); }); };
+    im.redeemCode = function (code) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'redemptions', code), { status: 'redeemed', redeemedAt: x.fs.serverTimestamp() }); }); };
+    im.adminRedemptions = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'redemptions')).then(function (q) { return q.docs.map(ord); }); }); };
     im.idToken = function () { return boot().then(function () { return auth.currentUser ? auth.currentUser.getIdToken() : Promise.reject(new Error('Please sign in again.')); }); };
     im.myOffers = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'offers'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(ord); }); }); };
     im.saveOffer = function (d) { return boot().then(function (x) { var f = { title: d.title, details: d.details, discount: d.discount, week: d.week }; if (d.id) return x.fs.updateDoc(x.fs.doc(db, 'offers', d.id), f).then(function () { return d.id; }); return x.fs.addDoc(x.fs.collection(db, 'offers'), Object.assign(f, { vendorId: auth.currentUser.uid, status: 'pending', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
@@ -176,7 +186,7 @@
   }
 
   var impl = api.mode === 'firebase' ? fbImpl() : api.mode === 'mock' ? mockImpl() : null;
-  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah', 'idToken', 'myOffers', 'saveOffer', 'deleteOffer', 'adminOffers', 'adminSetOffer', 'adminSaveOffer'].forEach(function (k) {
+  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah', 'claimOffer', 'getRedemption', 'vendorRedemptions', 'redeemCode', 'adminRedemptions', 'idToken', 'myOffers', 'saveOffer', 'deleteOffer', 'adminOffers', 'adminSetOffer', 'adminSaveOffer'].forEach(function (k) {
     api[k] = function () { return impl && impl[k] ? impl[k].apply(null, arguments) : Promise.reject(new Error('Vendor accounts are not switched on yet.')); };
   });
   if (impl && impl.init) impl.init().catch(function () {});

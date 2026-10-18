@@ -20,6 +20,55 @@
   function offersFor(wk) { return (D().offers || []).filter(function (o) { return o.week === wk; }); }
   function vendorOf(id) { return H().vendor(id); }
 
+  /* ---------- offer codes ---------- */
+  var ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  function newCode() { var a = new Uint8Array(8), out = ''; (root.crypto || root.msCrypto).getRandomValues(a); for (var i = 0; i < 8; i++) out += ALPHA.charAt(a[i] % ALPHA.length); return out; }
+  function showCode(c) { return String(c).slice(0, 4) + '-' + String(c).slice(4); }
+  function cleanCode(t) { return String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+  function weekEnd(wk) { var p = String(wk).split('-'); return new Date(+p[0], +p[1] - 1, +p[2] + 7, 0, 0, 0); }
+  function weekStart(wk) { var p = String(wk).split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 0, 0, 0); }
+  function isCurrent(wk) { var n = new Date(); return n >= weekStart(wk) && n < weekEnd(wk); }
+  function myCodes() { var a = lsGet('hub_codes', []); return Array.isArray(a) ? a : []; }
+  function codeFor(offerId) { return myCodes().filter(function (c) { return c.offerId === offerId; })[0]; }
+  function claimArea(o) {
+    var c = codeFor(o.id);
+    if (c) return '<div class="claim" data-for="' + esc(o.id) + '">' + codeBox(c) + '</div>';
+    if (!isCurrent(o.week)) return '<div class="muted">Codes open on ' + esc(fmt(weekStart(o.week))) + '.</div>';
+    return '<div class="claim" data-for="' + esc(o.id) + '"><button class="btn full" type="button" data-claim="' + esc(o.id) + '">Save this deal</button><div class="muted">Save it now and use it any day until Wednesday.</div></div>';
+  }
+  /* A saved deal lasts until the end of Wednesday, when the next Thursday week of offers begins. */
+  function until(c) { return weekEnd(c.week).getTime(); }
+  function lastDay(c) { return new Date(until(c) - 12 * 36e5); }
+  function left(c) { var d = Math.ceil((until(c) - Date.now()) / 864e5); return d <= 0 ? 'expired' : d === 1 ? 'last day' : d + ' days left'; }
+  function codeBox(c) {
+    return '<div class="codebox"><div class="muted">Show this code at the shop</div><div class="code">' + esc(showCode(c.code)) + '</div><div class="muted">One use. Use it by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + '). <a href="#/mycodes"><b>My saved deals</b></a></div></div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-claim]'); if (!b) return;
+    var id = b.getAttribute('data-claim'), o = (D().offers || []).filter(function (x) { return x.id === id; })[0], area = b.parentNode;
+    if (!o) return; b.disabled = true; b.textContent = 'Getting your code…';
+    function attempt(n) {
+      var code = newCode();
+      return DB.claimOffer(o, code).then(function (res) { return res; }, function (er) { if (n < 4 && /code-taken|already exists|permission/i.test(er.message || '')) return attempt(n + 1); throw er; });
+    }
+    attempt(0).then(function (res) {
+      var rec = { code: res.code, offerId: o.id, title: o.title, vendorId: o.vendorId, vname: (vendorOf(o.vendorId) || {}).name || '', week: o.week, at: Date.now() };
+      var l = myCodes(); l.unshift(rec); lsSet('hub_codes', l.slice(0, 60)); area.innerHTML = codeBox(rec);
+    }).catch(function () { b.disabled = false; b.textContent = 'Save this deal'; area.insertAdjacentHTML('beforeend', note('Could not get a code right now. Check your connection and try again.')); });
+  });
+  S.mycodes = function () {
+    return { title: 'Saved deals', html: '<div id="mc"></div>', bind: function (view) {
+      var box = view.querySelector('#mc'), l = myCodes();
+      function st(r, c) { return r && r.status === 'redeemed' ? ['Used', ''] : Date.now() >= until(c) ? ['Expired', ''] : ['Ready to use', ' v']; }
+      box.innerHTML = '<h1>My saved deals</h1><p class="muted">Kept on this phone only. Each deal can be used once, any day until the Wednesday before the next Thursday offers. Show the code at the shop.</p>' + (l.length ? l.map(function (c) { return '<div class="box" data-c="' + esc(c.code) + '"><div class="otop"><b>' + esc(c.title) + '</b><span class="tag" data-s>…</span></div><div class="muted">' + esc(c.vname) + '</div><div class="code sm">' + esc(showCode(c.code)) + '</div><div class="muted">Use by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + ')</div>' + (c.vendorId ? '<a href="#/v/' + esc(c.vendorId) + '">Open the shop</a>' : '') + '</div>'; }).join('') : '<div class="box">No saved deals yet. Open <a href="#/offers"><b>this week\'s offers</b></a> and tap Save this deal.</div>');
+      l.slice(0, 20).forEach(function (c) {
+        var tag = box.querySelector('[data-c="' + c.code + '"] [data-s]');
+        function paint(r) { var s = st(r, c); if (tag) { tag.textContent = s[0]; tag.className = 'tag' + s[1]; } }
+        DB.getRedemption(c.code).then(paint).catch(function () { paint(null); });
+      });
+    } };
+  };
+
   /* ---------- visiting a shop ---------- */
   function mapsUrl(v) {
     var m = H().safeUrl(v.map); if (m) return m;
@@ -37,12 +86,12 @@
     return '<div class="box offer"><div class="otop"><b>' + esc(o.title) + '</b>' + (o.discount ? '<span class="tag v">' + esc(o.discount) + '</span>' : '') + '</div>' +
       (o.details ? '<div>' + esc(o.details) + '</div>' : '') +
       '<div class="muted">At <a href="#/v/' + esc(o.vendorId) + '"><b>' + esc(v.name || 'Shop') + '</b></a>' + (v.city ? ', ' + esc(v.city) : '') + '</div>' +
-      (v.address ? '<div class="muted">Visit: ' + esc(v.address) + '</div>' : '<div class="muted">Online or by WhatsApp. No shop address listed.</div>') + visitRow(v) + '</div>';
+      (v.address ? '<div class="muted">Visit: ' + esc(v.address) + '</div>' : '<div class="muted">Online or by WhatsApp. No shop address listed.</div>') + visitRow(v) + claimArea(o) + '</div>';
   }
   function homeBlock() {
     var w = weeks()[0], list = offersFor(w.key);
-    if (!list.length) return '';
-    return '<div class="sech"><h2>Offers this week</h2><a href="#/offers">See all</a></div><div class="muted" style="margin:-6px 0 8px">' + esc(w.range) + '</div>' + list.slice(0, 2).map(offerCard).join('');
+    var banner = '<a class="nextcard offerbar" href="#/offers"><div class="muted2">Weekly offers · ' + esc(w.range) + '</div><div class="row2"><b>' + (list.length ? list.length + ' offer' + (list.length === 1 ? '' : 's') + ' from local shops' : 'See this week\'s offers') + '</b><span class="big">›</span></div><div class="muted2">Save a deal and use it at the shop before Wednesday ends</div></a>';
+    return banner + (list.length ? list.slice(0, 2).map(offerCard).join('') + '<p><a href="#/offers"><b>See all offers</b></a></p>' : '');
   }
   function vendorBlock(vid) {
     var out = weeks().map(function (w) { var l = offersFor(w.key).filter(function (o) { return o.vendorId === vid; }); return l.length ? '<h2>' + esc(w.name) + ' <small class="muted">' + esc(w.range) + '</small></h2>' + l.map(function (o) { return '<div class="box offer"><div class="otop"><b>' + esc(o.title) + '</b>' + (o.discount ? '<span class="tag v">' + esc(o.discount) + '</span>' : '') + '</div>' + (o.details ? '<div>' + esc(o.details) + '</div>' : '') + '</div>'; }).join('') : ''; }).join('');
@@ -103,27 +152,44 @@
   /* ---------- vendor screen ---------- */
   S.myoffers = function () {
     return { title: 'My offers', html: '<div id="mo"><div class="box muted">Loading…</div></div>', bind: function (view) {
-      var box = view.querySelector('#mo'), vendor, list = null, msg = '';
+      var box = view.querySelector('#mo'), vendor, list = null, msg = '', reds = [], rmsg = '', pending = null;
       function draw() {
         var ws = weeks();
         box.innerHTML = '<p><a href="#/sell"><b>‹ Back to my shop</b></a></p><h1>Weekly offers</h1><p class="muted">Offers run Thursday to Thursday. We approve each one before people see it.</p>' +
+          '<form class="box" id="rf"><b>Customer has a code?</b><div class="muted">Ask to see their code on their phone, type it here, and mark it used. Each code works once, on any day until Wednesday of the offer week.</div><label class="fld">Code<input id="rc" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" required></label><button class="btn full" type="submit">Check code</button>' + rmsg + '</form>' +
           '<form class="box" id="of"><b>New offer</b><label class="fld">Offer title<input id="ot" maxlength="80" required placeholder="For example: 20% off all attars"></label>' +
           '<label class="fld">Discount tag (optional)<input id="od" maxlength="40" placeholder="20% off, Buy 1 get 1, Free delivery"></label>' +
           '<label class="fld">Details<textarea id="ox" rows="3" maxlength="300" placeholder="What is included, any conditions"></textarea></label>' +
           '<label class="fld">When<select id="ow">' + ws.map(function (w) { return '<option value="' + w.key + '">' + esc(w.name) + ': ' + esc(w.range) + '</option>'; }).join('') + '</select></label>' +
           (vendor.address ? '' : '<div class="muted">Tip: add your shop address in Edit details so people can visit you.</div>') +
           '<button class="btn full" type="submit">Send for approval</button></form>' + msg +
-          '<h2>My offers</h2>' + (list.length ? list.map(function (o) { var w = ws.filter(function (x) { return x.key === o.week; })[0]; return '<div class="box"><div class="otop"><b>' + esc(o.title) + '</b><span class="tag' + (o.status === 'approved' ? ' v' : '') + '">' + esc(o.status === 'pending' ? 'Waiting for approval' : o.status === 'approved' ? 'Live' : 'Not approved') + '</span></div><div class="muted">' + esc(w ? w.name + ': ' + w.range : 'Week of ' + o.week) + (o.discount ? ' · ' + esc(o.discount) : '') + '</div><div class="mr"><button class="btn ghost sm" type="button" data-del="' + esc(o.id) + '">Delete</button></div></div>'; }).join('') : '<div class="box muted">No offers yet.</div>');
+          '<h2>My offers</h2>' + (list.length ? list.map(function (o) { var w = ws.filter(function (x) { return x.key === o.week; })[0]; return '<div class="box"><div class="otop"><b>' + esc(o.title) + '</b><span class="tag' + (o.status === 'approved' ? ' v' : '') + '">' + esc(o.status === 'pending' ? 'Waiting for approval' : o.status === 'approved' ? 'Live' : 'Not approved') + '</span></div><div class="muted">' + esc(w ? w.name + ': ' + w.range : 'Week of ' + o.week) + (o.discount ? ' · ' + esc(o.discount) : '') + '</div>' + (o.status === 'approved' ? '<div class="muted">Codes: ' + reds.filter(function (r) { return r.offerId === o.id; }).length + ' taken, ' + reds.filter(function (r) { return r.offerId === o.id && r.status === 'redeemed'; }).length + ' used</div>' : '') + '<div class="mr"><button class="btn ghost sm" type="button" data-del="' + esc(o.id) + '">Delete</button></div></div>'; }).join('') : '<div class="box muted">No offers yet.</div>');
         msg = '';
       }
-      function load() { DB.myOffers().then(function (l) { list = l.sort(function (a, b) { return String(b.week).localeCompare(String(a.week)); }); draw(); }).catch(function (e) { box.innerHTML = note('Could not load your offers. ' + e.message); }); }
+      function load() { Promise.all([DB.myOffers(), DB.vendorRedemptions().catch(function () { return []; })]).then(function (r) { list = r[0].sort(function (a, b) { return String(b.week).localeCompare(String(a.week)); }); reds = r[1]; draw(); }).catch(function (e) { box.innerHTML = note('Could not load your offers. ' + e.message); }); }
       box.addEventListener('submit', function (e) {
         e.preventDefault(); var g = function (id) { return (document.getElementById(id) || {}).value || ''; };
+        if (e.target.id === 'rf') {
+          var code = cleanCode(g('rc')); function say(t, ok) { var f = document.getElementById('rf'); var n = f.querySelector('.note, .rbox'); if (n) n.remove(); f.insertAdjacentHTML('beforeend', typeof t === 'string' && t.charAt(0) === '<' ? t : note(t, ok)); }
+          if (code.length !== 8) return say('A code has 8 letters and numbers, like K7Q2-9MXD.');
+          DB.getRedemption(code).then(function (r) {
+            if (!r) return say('This code was not found. Check it and try again.');
+            if (r.vendorId !== vendor.id) return say('This code is for a different shop.');
+            var o = list.filter(function (x) { return x.id === r.offerId; })[0], title = o ? o.title : 'Offer';
+            if (r.status === 'redeemed') return say('Already used' + (r.redeemedAt ? ' on ' + new Date(r.redeemedAt).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '') + '. Do not give the offer again.');
+            if (Date.now() >= weekEnd(r.week).getTime()) return say('This code has expired. Saved deals end on the Wednesday before the next Thursday offers.');
+            say('<div class="rbox note ok"><b>Valid code: ' + esc(title) + '</b><div>Give the customer this offer, then mark the code as used.</div><button class="btn full" type="button" data-use="' + esc(code) + '">Mark as used</button></div>');
+          }).catch(function (er) { say(er.message || 'Could not check the code.'); });
+          return;
+        }
         var d = { title: g('ot').trim(), discount: g('od').trim(), details: g('ox').trim(), week: g('ow') };
         if (d.title.length < 3) { box.insertAdjacentHTML('beforeend', note('Add a short title for the offer.')); return; }
         DB.saveOffer(d).then(function () { msg = note('Sent. It will go live once approved.', true); load(); }).catch(function (er) { box.insertAdjacentHTML('beforeend', note(er.message)); });
       });
-      box.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-del]'); if (b && confirm('Delete this offer?')) DB.deleteOffer(b.getAttribute('data-del')).then(function () { if (root.HubApp) root.HubApp.stale(); load(); }).catch(function (er) { alert(er.message); }); });
+      box.addEventListener('click', function (e) {
+        var u = e.target.closest && e.target.closest('[data-use]');
+        if (u) { u.disabled = true; DB.redeemCode(u.getAttribute('data-use')).then(function () { rmsg = note('Code marked as used. Thank you.', true); load(); }).catch(function (er) { u.disabled = false; u.insertAdjacentHTML('afterend', note(er.message || 'Could not mark it used.')); }); return; }
+        var b = e.target.closest && e.target.closest('[data-del]'); if (b && confirm('Delete this offer?')) DB.deleteOffer(b.getAttribute('data-del')).then(function () { if (root.HubApp) root.HubApp.stale(); load(); }).catch(function (er) { alert(er.message); }); });
       DB.onAuth(function (u) {
         if (!box.isConnected) return;
         if (DB.mode === 'off') { box.innerHTML = note('Accounts are not switched on yet.'); return; }
@@ -136,11 +202,11 @@
   /* ---------- admin screen ---------- */
   S.adminoffers = function () {
     return { title: 'Offers (admin)', html: '<div id="ao"><div class="box muted">Loading…</div></div>', bind: function (view) {
-      var box = view.querySelector('#ao'), vs = [], os2 = [], msg = '';
+      var box = view.querySelector('#ao'), vs = [], os2 = [], rd = [], msg = '';
       function vname(id) { var v = vs.filter(function (x) { return x.id === id; })[0]; return v ? v.name : id; }
       function row(o, ws) {
         var w = ws.filter(function (x) { return x.key === o.week; })[0];
-        return '<div class="box"><div class="otop"><b>' + esc(o.title) + '</b><span class="tag' + (o.status === 'approved' ? ' v' : '') + '">' + esc(o.status) + '</span></div><div class="muted">' + esc(vname(o.vendorId)) + ' · ' + esc(w ? w.name + ': ' + w.range : 'Week of ' + o.week) + (o.discount ? ' · ' + esc(o.discount) : '') + '</div>' + (o.details ? '<div>' + esc(o.details) + '</div>' : '') +
+        return '<div class="box"><div class="otop"><b>' + esc(o.title) + '</b><span class="tag' + (o.status === 'approved' ? ' v' : '') + '">' + esc(o.status) + '</span></div><div class="muted">' + esc(vname(o.vendorId)) + ' · ' + esc(w ? w.name + ': ' + w.range : 'Week of ' + o.week) + (o.discount ? ' · ' + esc(o.discount) : '') + '</div>' + (o.status === 'approved' ? '<div class="muted">Codes: ' + rd.filter(function (r) { return r.offerId === o.id; }).length + ' taken, ' + rd.filter(function (r) { return r.offerId === o.id && r.status === 'redeemed'; }).length + ' used</div>' : '') + (o.details ? '<div>' + esc(o.details) + '</div>' : '') +
           '<div class="mr">' + (o.status !== 'approved' ? '<button class="btn sm" type="button" data-st="approved" data-id="' + esc(o.id) + '">Approve</button>' : '') + (o.status === 'pending' ? '<button class="btn ghost sm" type="button" data-st="rejected" data-id="' + esc(o.id) + '">Reject</button>' : '') + '<button class="btn ghost sm" type="button" data-od="' + esc(o.id) + '">Delete</button></div></div>';
       }
       function draw() {
@@ -161,7 +227,7 @@
       function load() {
         DB.isAdmin().then(function (ok) {
           if (!ok) { box.innerHTML = '<div class="box">This page is for the Dargah Hub team. <a href="#/sell"><b>Sign in</b></a> with the admin account.</div>'; return; }
-          return Promise.all([DB.adminVendors(), DB.adminOffers()]).then(function (r) { vs = r[0]; os2 = r[1]; draw(); });
+          return Promise.all([DB.adminVendors(), DB.adminOffers(), DB.adminRedemptions().catch(function () { return []; })]).then(function (r) { vs = r[0]; os2 = r[1]; rd = r[2]; draw(); });
         }).catch(function (e) { box.innerHTML = '<div class="box">Could not load. ' + esc(e.message) + '</div>'; });
       }
       function done(p) { return p.then(function () { if (root.HubApp) root.HubApp.stale(); }).then(load).catch(function (er) { alert(er.message); }); }
@@ -191,5 +257,5 @@
     } };
   };
 
-  root.HubOffers = { homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
+  root.HubOffers = { cleanCode: cleanCode, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
 })(typeof self !== 'undefined' ? self : this);
