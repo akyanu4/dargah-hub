@@ -44,6 +44,9 @@
     im.adminSetReport = function (id, st) { s.reports[id].status = st; save(); return Promise.resolve(); };
     im.adminSetVerified = function (uid, v) { s.vendors[uid].verified = !!v; save(); return Promise.resolve(); };
     im.adminHideProduct = function (id) { if (s.products[id]) s.products[id].hidden = true; save(); return Promise.resolve(); };
+    im.adminOrders = function () { return Promise.resolve(list(s.orders)); };
+    im.adminImport = function (pack) { pack.vendors.forEach(function (v) { s.vendors[v.id] = Object.assign({}, v.data, { id: v.id }); }); pack.products.forEach(function (p) { s.products[p.id] = Object.assign({}, p.data, { id: p.id }); }); save(); return Promise.resolve(); };
+    im.adminDeleteVendor = function (id) { Object.keys(s.products).forEach(function (k) { if (s.products[k].vendorId === id) delete s.products[k]; }); delete s.vendors[id]; save(); return Promise.resolve(); };
     return im;
   }
 
@@ -98,11 +101,28 @@
     im.adminSetReport = function (id, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'reports', id), { status: st }); }); };
     im.adminSetVerified = function (uid, v) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'vendors', uid), { verified: !!v }); }); };
     im.adminHideProduct = function (id) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'products', id), { hidden: true }); }); };
+    im.adminOrders = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'orders')).then(function (q) { return q.docs.map(ord); }); }); };
+    im.adminImport = function (pack) {
+      return boot().then(function (x) {
+        var ops = pack.vendors.map(function (v) { return ['vendors', v.id, v.data]; }).concat(pack.products.map(function (p) { return ['products', p.id, p.data]; })), chain = Promise.resolve();
+        for (var i = 0; i < ops.length; i += 400) (function (part) {
+          chain = chain.then(function () { var b = x.fs.writeBatch(db); part.forEach(function (o) { b.set(x.fs.doc(db, o[0], o[1]), Object.assign({}, o[2], { updatedAt: x.fs.serverTimestamp() })); }); return b.commit(); });
+        })(ops.slice(i, i + 400));
+        return chain;
+      });
+    };
+    im.adminDeleteVendor = function (id) {
+      return boot().then(function (x) {
+        return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'products'), x.fs.where('vendorId', '==', id))).then(function (q) {
+          return Promise.all(q.docs.map(function (d) { return x.fs.deleteDoc(d.ref); }));
+        }).then(function () { return x.fs.deleteDoc(x.fs.doc(db, 'vendors', id)); });
+      });
+    };
     return im;
   }
 
   var impl = api.mode === 'firebase' ? fbImpl() : api.mode === 'mock' ? mockImpl() : null;
-  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct'].forEach(function (k) {
+  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor'].forEach(function (k) {
     api[k] = function () { return impl && impl[k] ? impl[k].apply(null, arguments) : Promise.reject(new Error('Vendor accounts are not switched on yet.')); };
   });
   if (impl && impl.init) impl.init().catch(function () {});

@@ -78,14 +78,14 @@ service cloud.firestore {
 
     match /vendors/{uid} {
       allow read: if resource.data.status == 'approved' || (signedIn() && request.auth.uid == uid) || isAdmin();
-      allow create: if signedIn() && request.auth.uid == uid && request.resource.data.status == 'pending' && !('verified' in request.resource.data) && okVendor(request.resource.data);
+      allow create: if (signedIn() && request.auth.uid == uid && request.resource.data.status == 'pending' && !('verified' in request.resource.data) && okVendor(request.resource.data)) || isAdmin();
       allow update: if (signedIn() && request.auth.uid == uid && request.resource.data.status == resource.data.status && request.resource.data.get('verified', false) == resource.data.get('verified', false) && okVendor(request.resource.data)) || isAdmin();
       allow delete: if isAdmin();
     }
 
     match /products/{id} {
       allow read: if true;
-      allow create: if signedIn() && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data);
+      allow create: if (signedIn() && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data)) || isAdmin();
       allow update: if (signedIn() && resource.data.vendorId == request.auth.uid && request.resource.data.vendorId == request.auth.uid && approvedVendor(request.auth.uid) && okProduct(request.resource.data)) || isAdmin();
       allow delete: if (signedIn() && resource.data.vendorId == request.auth.uid) || isAdmin();
     }

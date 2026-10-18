@@ -38,6 +38,9 @@ These use three more collections, created automatically on first use: `orders`, 
 - To cut form and order spam, enable **App Check** (reCAPTCHA v3) in Firebase later. The forms already have a hidden spam field and a short wait between sends.
 - Set your WhatsApp business number in `data/platform.json` (`whatsapp`, with country code and no plus sign) to show a "Chat with us" button on the forms.
 
+## Bulk import (Admin > Import)
+Add many vendors and items from a spreadsheet. In `#/admin` open **Import**, download the template, fill one row per item (vendor columns repeat), save as **CSV (UTF-8)**, upload, check the preview, and import. Uploading the same vendor and item names again updates them. Imported vendors have no sign-in: you manage their orders in the **Orders** tab, and can delete a vendor with its items from **Vendors**. This needs the latest `firestore.rules` published (admins may now create vendors and items).
+
 ## How it works
 - A vendor signs up, creates a profile (either "I already have a shop" with a link, or "I do not have a shop"), and waits for approval.
 - Once approved they can add items (name, category, price, description, up to three photos, sold-out switch). Photos are resized on the phone and kept inside the item record, so no paid storage is needed.

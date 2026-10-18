@@ -168,10 +168,10 @@
       var box = view.querySelector('#ad'), tab = 'vendors', cache = {};
       if (DB.mode === 'off') { box.innerHTML = '<div class="box">Accounts are not switched on.</div>'; return; }
       function when(ms) { try { return ms ? new Date(ms).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''; } catch (e) { return ''; } }
-      function tabs(c) { return '<div class="tabs"><button type="button" data-t="vendors" class="' + (tab === 'vendors' ? 'on' : '') + '">Vendors' + (c.pend ? ' <span class="cnt">' + c.pend + '</span>' : '') + '</button><button type="button" data-t="leads" class="' + (tab === 'leads' ? 'on' : '') + '">Requests' + (c.leads ? ' <span class="cnt">' + c.leads + '</span>' : '') + '</button><button type="button" data-t="reports" class="' + (tab === 'reports' ? 'on' : '') + '">Reports' + (c.reps ? ' <span class="cnt">' + c.reps + '</span>' : '') + '</button></div>'; }
+      function tabs(c) { return '<div class="tabs"><button type="button" data-t="vendors" class="' + (tab === 'vendors' ? 'on' : '') + '">Vendors' + (c.pend ? ' <span class="cnt">' + c.pend + '</span>' : '') + '</button><button type="button" data-t="orders" class="' + (tab === 'orders' ? 'on' : '') + '">Orders' + (c.ords ? ' <span class="cnt">' + c.ords + '</span>' : '') + '</button><button type="button" data-t="leads" class="' + (tab === 'leads' ? 'on' : '') + '">Requests' + (c.leads ? ' <span class="cnt">' + c.leads + '</span>' : '') + '</button><button type="button" data-t="reports" class="' + (tab === 'reports' ? 'on' : '') + '">Reports' + (c.reps ? ' <span class="cnt">' + c.reps + '</span>' : '') + '</button><button type="button" data-t="import" class="' + (tab === 'import' ? 'on' : '') + '">Import</button></div>'; }
       function vendorsHtml(vs) {
         var order = { pending: 0, approved: 1, rejected: 2 }; vs.sort(function (a, b) { return (order[a.status] || 0) - (order[b.status] || 0); });
-        return vs.map(function (v) { return '<div class="box"><b>' + esc(v.name) + '</b> <span class="tag">' + esc(v.status) + '</span>' + (v.verified ? '<span class="tag v">Verified</span>' : '') + '<div class="muted">' + esc(v.city) + ' · ' + (v.type === 'shop' ? 'has a shop' : 'sells here') + '</div><div class="muted">' + esc(v.about) + '</div>' + (v.shopUrl ? '<div><a href="' + esc(v.shopUrl) + '" target="_blank" rel="noopener">' + esc(v.shopUrl) + '</a></div>' : '') + '<div class="muted">WhatsApp ' + esc(v.whatsapp) + ' ' + esc(v.phone || '') + ' ' + esc(v.contactEmail || '') + '</div><div class="mr"><button class="btn sm" data-s="approved" data-id="' + esc(v.id) + '" type="button">Approve</button><button class="btn ghost sm" data-s="rejected" data-id="' + esc(v.id) + '" type="button">Reject</button><button class="btn ghost sm" data-s="pending" data-id="' + esc(v.id) + '" type="button">Pause</button><button class="btn ghost sm" data-vf="' + (v.verified ? '0' : '1') + '" data-id="' + esc(v.id) + '" type="button">' + (v.verified ? 'Remove badge' : 'Give Verified badge') + '</button></div></div>'; }).join('') || '<div class="box muted">No vendors yet.</div>';
+        return vs.map(function (v) { return '<div class="box"><b>' + esc(v.name) + '</b> <span class="tag">' + esc(v.status) + '</span>' + (v.verified ? '<span class="tag v">Verified</span>' : '') + '<div class="muted">' + esc(v.city) + ' · ' + (v.type === 'shop' ? 'has a shop' : 'sells here') + '</div><div class="muted">' + esc(v.about) + '</div>' + (v.shopUrl ? '<div><a href="' + esc(v.shopUrl) + '" target="_blank" rel="noopener">' + esc(v.shopUrl) + '</a></div>' : '') + '<div class="muted">WhatsApp ' + esc(v.whatsapp) + ' ' + esc(v.phone || '') + ' ' + esc(v.contactEmail || '') + '</div><div class="mr"><button class="btn sm" data-s="approved" data-id="' + esc(v.id) + '" type="button">Approve</button><button class="btn ghost sm" data-s="rejected" data-id="' + esc(v.id) + '" type="button">Reject</button><button class="btn ghost sm" data-s="pending" data-id="' + esc(v.id) + '" type="button">Pause</button>' + (String(v.id).indexOf('imp-') === 0 ? '<button class="btn ghost sm" data-dv="' + esc(v.id) + '" type="button">Delete vendor and items</button>' : '') + '<button class="btn ghost sm" data-vf="' + (v.verified ? '0' : '1') + '" data-id="' + esc(v.id) + '" type="button">' + (v.verified ? 'Remove badge' : 'Give Verified badge') + '</button></div></div>'; }).join('') || '<div class="box muted">No vendors yet.</div>';
       }
       function leadsHtml(ls) {
         ls.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
@@ -182,26 +182,107 @@
         return rs.map(function (r) { var link = r.targetType === 'p' ? '' : r.targetType === 'v' ? '#/v/' + r.targetId : r.targetType === 'd' ? '#/d/' + r.targetId : '#/order/' + r.targetId;
           return '<div class="box"><span class="tag">' + esc({ p: 'item', v: 'vendor', d: 'dargah', o: 'order' }[r.targetType] || r.targetType) + '</span><span class="tag' + (r.status === 'new' ? '' : ' v') + '">' + esc(r.status) + '</span> <span class="muted">' + esc(when(r.createdAt)) + '</span><div><b>' + esc(r.targetName || r.targetId) + '</b> · ' + esc(r.reason) + '</div><div style="white-space:pre-wrap">' + esc(r.details) + '</div><div class="muted">' + esc(r.contact || '') + '</div><div class="mr">' + (link ? '<a class="btn ghost sm" href="' + esc(link) + '">Open</a>' : '') + (r.targetType === 'p' ? '<button class="btn sm" type="button" data-hp="' + esc(r.targetId) + '" data-id="' + esc(r.id) + '">Hide this item</button>' : '') + '<button class="btn ghost sm" type="button" data-r="' + (r.status === 'new' ? 'done' : 'new') + '" data-id="' + esc(r.id) + '">' + (r.status === 'new' ? 'Mark handled' : 'Reopen') + '</button></div></div>'; }).join('') || '<div class="box muted">No reports.</div>';
       }
+      function ordersHtml(os) {
+        os.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+        return '<p class="muted">All order requests. Vendors who sign in also see their own. Imported vendors have no sign-in, so you handle their orders here.</p>' + (os.map(function (o) { return '<div class="muted" style="margin-top:12px"><b>' + esc(o.vendorName || o.vendorId) + '</b></div>' + orderRow(o); }).join('') || '<div class="box muted">No orders yet.</div>');
+      }
+      var pack = null, imsg = '';
+      function importHtml() {
+        return '<h2 style="margin-top:6px">Bulk import</h2><div class="box"><p>Add many vendors and items at once. Use one row per item: the vendor columns repeat on each row. In Excel or Google Sheets, save the file as <b>CSV (UTF-8)</b>.</p><button class="btn ghost sm" type="button" data-dl="1">Download the template</button>' +
+          '<p class="muted">Columns: <b>vendor_name</b>, city, <b>whatsapp</b> (with country code), phone, email, about, delivery, <b>item_name</b>, category, <b>price</b>, description, image_url (https link, optional), sold_out (yes or no). Uploading the same names again updates them instead of adding copies.</p>' +
+          '<label class="fld">CSV file<input id="imf" type="file" accept=".csv,text/csv"></label>' +
+          '<label class="rd"><input type="checkbox" id="imap" checked><span>Approve these vendors now (they go live in the shop)</span></label><label class="rd"><input type="checkbox" id="imv"><span>Give them the Verified badge</span></label></div><div id="imr">' + (imsg || '') + '</div>';
+      }
+      function csvParse(t) {
+        t = String(t).replace(/^﻿/, ''); var rows = [], row = [], cur = '', q = false, i, c;
+        var delim = (t.split('\n')[0].split(';').length > t.split('\n')[0].split(',').length) ? ';' : ',';
+        for (i = 0; i < t.length; i++) {
+          c = t[i];
+          if (q) { if (c === '"') { if (t[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+          else if (c === '"') q = true;
+          else if (c === delim || c === '\t') { row.push(cur); cur = ''; }
+          else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.some(function (x) { return x.trim() !== ''; })) rows.push(row); row = []; }
+          else cur += c;
+        }
+        row.push(cur); if (row.some(function (x) { return x.trim() !== ''; })) rows.push(row); return rows;
+      }
+      function slug(t, n) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, n || 40) || 'x'; }
+      var ALIAS = { vendor: 'vendor_name', shop: 'vendor_name', shop_name: 'vendor_name', business: 'vendor_name', whatsapp_number: 'whatsapp', mobile: 'phone', email_address: 'email', item: 'item_name', product: 'item_name', product_name: 'item_name', name: 'item_name', cat: 'category', desc: 'description', image: 'image_url', photo: 'image_url', photo_url: 'image_url', soldout: 'sold_out' };
+      function buildPack(text) {
+        var rows = csvParse(text), errs = [], vendors = {}, vorder = [], prods = {}, porder = [];
+        if (rows.length < 2) return { errs: ['The file has no data rows.'], vendors: [], products: [] };
+        var head = rows[0].map(function (h) { h = h.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''); return ALIAS[h] || h; });
+        if (head.indexOf('vendor_name') < 0) return { errs: ['The first row must have a vendor_name column. Download the template to see the layout.'], vendors: [], products: [] };
+        rows.slice(1).forEach(function (r, k) {
+          var n = k + 2, g = function (key) { var i = head.indexOf(key); return i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim(); }, bad = [];
+          var vn = g('vendor_name'), wa = digits(g('whatsapp')), city = g('city'), about = g('about'), del = g('delivery'), iname = g('item_name');
+          if (vn.length < 2 || vn.length > 80) bad.push('vendor_name must be 2 to 80 characters');
+          if (wa.length < 8 || wa.length > 15) bad.push('whatsapp must be 8 to 15 digits with country code');
+          if (city.length > 60) bad.push('city is too long (max 60)'); if (about.length > 500) bad.push('about is too long (max 500)'); if (del.length > 200) bad.push('delivery is too long (max 200)');
+          var item = null;
+          if (iname) {
+            var price = parseFloat(g('price').replace(/[^0-9.]/g, '')), cat = g('category') || 'Other', desc = g('description'), img = g('image_url'), sold = /^(y|yes|true|1)$/i.test(g('sold_out'));
+            if (iname.length < 2 || iname.length > 80) bad.push('item_name must be 2 to 80 characters');
+            if (!(price >= 0) || price >= 10000000) bad.push('price must be a number');
+            if (cat.length > 40) bad.push('category is too long (max 40)'); if (desc.length > 500) bad.push('description is too long (max 500)');
+            if (img && !/^https:\/\/[^\s]+$/i.test(img)) bad.push('image_url must start with https://'); if (img.length > 1000) bad.push('image_url is too long');
+            item = { name: iname, cat: cat, price: price, desc: desc, img: img, sold: sold };
+          }
+          if (bad.length) { errs.push('Row ' + n + ': ' + bad.join('; ')); return; }
+          var vid = 'imp-' + slug(vn, 40) + '-' + wa.slice(-4);
+          if (!vendors[vid]) { vendors[vid] = { name: vn, city: city, about: about, whatsapp: wa, phone: g('phone').slice(0, 30), contactEmail: g('email').slice(0, 120), delivery: del }; vorder.push(vid); }
+          if (item) {
+            var pid = vid + '-' + slug(item.name, 50);
+            if (prods[pid]) { errs.push('Row ' + n + ': ' + item.name + ' appears twice for ' + vn + ', skipped'); return; }
+            prods[pid] = Object.assign({ vendorId: vid }, item); porder.push(pid);
+          }
+        });
+        return { errs: errs, vendors: vorder.map(function (id) { return { id: id, d: vendors[id] }; }), products: porder.map(function (id) { return { id: id, d: prods[id] }; }) };
+      }
+      function previewHtml(pk) {
+        var h = '<div class="box"><div class="okl">' + pk.vendors.length + ' vendor' + (pk.vendors.length === 1 ? '' : 's') + ' and ' + pk.products.length + ' item' + (pk.products.length === 1 ? '' : 's') + ' ready to import.</div>' +
+          (pk.errs.length ? '<div><b>' + pk.errs.length + ' row' + (pk.errs.length === 1 ? '' : 's') + ' skipped. Fix them in the file and upload again:</b></div><ul class="errl">' + pk.errs.slice(0, 30).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + (pk.errs.length > 30 ? '<li>and ' + (pk.errs.length - 30) + ' more</li>' : '') + '</ul>' : '');
+        if (pk.products.length) h += '<table class="pv2"><tr><th>Vendor</th><th>Item</th><th>Price</th></tr>' + pk.products.slice(0, 8).map(function (p) { var v = pk.vendors.filter(function (x) { return x.id === p.d.vendorId; })[0]; return '<tr><td>' + esc(v ? v.d.name : '') + '</td><td>' + esc(p.d.name) + '</td><td>' + esc(cur(p.d.price)) + '</td></tr>'; }).join('') + '</table>' + (pk.products.length > 8 ? '<div class="muted">and ' + (pk.products.length - 8) + ' more items</div>' : '');
+        h += (pk.vendors.length ? '<button class="btn full" type="button" data-imp="1">Import ' + pk.vendors.length + ' vendors and ' + pk.products.length + ' items</button>' : '') + '</div>'; return h;
+      }
       function paint() {
-        var c = { pend: cache.vs.filter(function (v) { return v.status === 'pending'; }).length, leads: cache.ls.filter(function (l) { return l.status === 'new'; }).length, reps: cache.rs.filter(function (r) { return r.status === 'new'; }).length };
-        box.innerHTML = '<h1>Admin</h1>' + tabs(c) + (tab === 'vendors' ? vendorsHtml(cache.vs) : tab === 'leads' ? leadsHtml(cache.ls) : reportsHtml(cache.rs));
+        var c = { pend: cache.vs.filter(function (v) { return v.status === 'pending'; }).length, leads: cache.ls.filter(function (l) { return l.status === 'new'; }).length, reps: cache.rs.filter(function (r) { return r.status === 'new'; }).length, ords: cache.os.filter(function (o) { return o.status === 'new'; }).length };
+        box.innerHTML = '<h1>Admin</h1>' + tabs(c) + (tab === 'vendors' ? vendorsHtml(cache.vs) : tab === 'leads' ? leadsHtml(cache.ls) : tab === 'reports' ? reportsHtml(cache.rs) : tab === 'orders' ? ordersHtml(cache.os) : importHtml());
       }
       function load() {
         DB.isAdmin().then(function (ok) {
           if (!ok) { box.innerHTML = '<div class="box">This page is for the Dargah Hub team. <a href="#/sell"><b>Sign in</b></a> with the admin account.</div>'; return; }
-          return Promise.all([DB.adminVendors(), DB.adminLeads(), DB.adminReports()]).then(function (r) { cache.vs = r[0]; cache.ls = r[1]; cache.rs = r[2]; paint(); });
+          return Promise.all([DB.adminVendors(), DB.adminLeads(), DB.adminReports(), DB.adminOrders()]).then(function (r) { cache.vs = r[0]; cache.ls = r[1]; cache.rs = r[2]; cache.os = r[3]; paint(); });
         }).catch(function (e) { box.innerHTML = '<div class="box">Could not load. ' + esc(e.message) + '</div>'; });
       }
       function done(p) { return p.then(function () { if (root.HubApp) root.HubApp.stale(); }).then(load).catch(function (er) { alert(er.message); }); }
       box.addEventListener('click', function (e) {
         var b = e.target.closest && e.target.closest('button'); if (!b) return;
-        if (b.hasAttribute('data-t')) { tab = b.getAttribute('data-t'); paint(); return; }
+        if (b.hasAttribute('data-t')) { tab = b.getAttribute('data-t'); if (tab !== 'import') { imsg = ''; pack = null; } paint(); return; }
         var id = b.getAttribute('data-id');
+        if (b.hasAttribute('data-dl')) { var tpl = 'vendor_name,city,whatsapp,phone,email,about,delivery,item_name,category,price,description,image_url,sold_out\r\nAl Noor Attars,Hyderabad,919876543210,,,Alcohol-free attars and oud oils,Delivery in Hyderabad Rs 50. India-wide in 3 to 5 days,Rose Attar 12 ml,Attar,450,Soft rose oil in a sandalwood base,,no\r\nAl Noor Attars,Hyderabad,919876543210,,,Alcohol-free attars and oud oils,Delivery in Hyderabad Rs 50. India-wide in 3 to 5 days,Oud Attar 6 ml,Attar,1200,Deep long-lasting oud oil,,no\r\nZam Zam Caps,Hyderabad,919812345678,,,Handmade topis and prayer caps,Pickup or courier,White Cotton Topi,Topi,250,Hand-stitched cotton topi,,no\r\n'; var a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿' + tpl); a.download = 'dargah-hub-import-template.csv'; document.body.appendChild(a); a.click(); a.remove(); return; }
+        if (b.hasAttribute('data-imp')) {
+          if (!pack || !pack.vendors.length) return;
+          var ap = document.getElementById('imap').checked, vf = document.getElementById('imv').checked; b.disabled = true; b.textContent = 'Importing…';
+          var payload = { vendors: pack.vendors.map(function (v) { return { id: v.id, data: { name: v.d.name, city: v.d.city, about: v.d.about, type: 'direct', shopUrl: '', whatsapp: v.d.whatsapp, phone: v.d.phone, contactEmail: v.d.contactEmail, delivery: v.d.delivery, verified: vf, status: ap ? 'approved' : 'pending' } }; }),
+            products: pack.products.map(function (p) { return { id: p.id, data: { vendorId: p.d.vendorId, name: p.d.name, cat: p.d.cat, price: p.d.price, desc: p.d.desc, img: p.d.img, imgs: [], buy: '', hidden: false, soldOut: p.d.sold } }; }) };
+          var nv = payload.vendors.length, np = payload.products.length;
+          DB.adminImport(payload).then(function () { imsg = '<div class="note ok">Imported ' + nv + ' vendors and ' + np + ' items.' + (ap ? ' They are live in the shop now.' : ' They are waiting in the Vendors tab for approval.') + '</div>'; pack = null; if (root.HubApp) root.HubApp.stale(); load(); }).catch(function (er) { b.disabled = false; b.textContent = 'Try again'; var r = document.getElementById('imr'); if (r) r.insertAdjacentHTML('beforeend', '<div class="note err">Import failed. ' + esc(er.message || '') + ' Check that the new rules are published.</div>'); });
+          return;
+        }
+        if (b.getAttribute('data-a') === 'ost') { var st = b.getAttribute('data-s'); if (st === 'cancelled' && !confirm('Cancel this order?')) return; b.disabled = true; done(DB.setOrderStatus(id, st)); return; }
+        if (b.hasAttribute('data-dv')) { if (confirm('Delete this vendor and all of its items? This cannot be undone.')) done(DB.adminDeleteVendor(b.getAttribute('data-dv'))); return; }
         if (b.hasAttribute('data-s')) done(DB.adminSetStatus(id, b.getAttribute('data-s')));
         else if (b.hasAttribute('data-vf')) done(DB.adminSetVerified(id, b.getAttribute('data-vf') === '1'));
         else if (b.hasAttribute('data-l')) done(DB.adminSetLead(id, b.getAttribute('data-l')));
         else if (b.hasAttribute('data-r')) done(DB.adminSetReport(id, b.getAttribute('data-r')));
         else if (b.hasAttribute('data-hp')) { if (confirm('Hide this item from the shop?')) done(DB.adminHideProduct(b.getAttribute('data-hp')).then(function () { return DB.adminSetReport(id, 'done'); })); }
+      });
+      box.addEventListener('change', function (e) {
+        if (e.target.id !== 'imf' || !e.target.files[0]) return;
+        var f = e.target.files[0], r = document.getElementById('imr'); imsg = '';
+        if (f.size > 2000000) { r.innerHTML = '<div class="note err">That file is too large. Split it into files under 2 MB.</div>'; return; }
+        var fr = new FileReader(); fr.onload = function () { pack = buildPack(fr.result); r.innerHTML = previewHtml(pack); }; fr.onerror = function () { r.innerHTML = '<div class="note err">That file could not be read.</div>'; }; fr.readAsText(f);
       });
       load();
     } };

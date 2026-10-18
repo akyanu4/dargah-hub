@@ -117,3 +117,7 @@ html{background:var(--page,var(--bg))}
 .gal.th{margin-top:10px;grid-template-columns:repeat(3,1fr)}
 select#rr,select#as{display:block;width:100%;margin-top:4px}
 .btn[disabled]{opacity:.6;cursor:default}
+
+.tabs{overflow-x:auto}.tabs button{white-space:nowrap;flex:1 0 auto;padding:12px 12px}
+.errl{margin:8px 0;padding-left:18px;font-size:13px;color:#8a1c1c}.okl{color:#14573a;font-weight:600}
+table.pv2{font-size:13px}table.pv2 td,table.pv2 th{padding:6px 8px}
