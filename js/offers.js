@@ -111,7 +111,7 @@
     if (!osState) {
       osState = 1; var sc = document.createElement('script'); sc.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'; sc.defer = true;
       sc.onerror = function () { osState = 0; cb(null); }; document.head.appendChild(sc);
-      root.OneSignalDeferred.push(function (O) { return Promise.resolve(O.init({ appId: appId(), serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js', serviceWorkerParam: { scope: '/push/onesignal/' }, notifyButton: { enable: false } })).then(function () { osErr = ''; }, function (e) { osErr = String((e && e.message) || e || 'init failed').slice(0, 160); }); });
+      root.OneSignalDeferred.push(function (O) { return Promise.resolve(O.init({ appId: appId(), notifyButton: { enable: false } })).then(function () { osErr = ''; }, function (e) { osErr = String((e && e.message) || e || 'init failed').slice(0, 160); }); });
     }
     root.OneSignalDeferred.push(function (O) { cb(O); });
   }

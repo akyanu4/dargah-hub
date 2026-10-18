@@ -206,5 +206,5 @@
     route(); window.addEventListener('hashchange', route);
     if (window.HubDB && HubDB.mode !== 'off') return HubDB.live().then(merge).then(function () { route(); }).catch(function () {});
   }).catch(function () { app.innerHTML = '<h2>Could not load</h2><p class="muted">Check your connection and reload.</p>'; });
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('OneSignalSDKWorker.js').catch(function () {});
 })();

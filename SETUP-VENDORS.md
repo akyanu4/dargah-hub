@@ -66,7 +66,7 @@ In `js/config.js` set `mock: true`. Data then stays in the browser only. Sign in
 Offers run Thursday to the next Thursday. Vendors post them at `#/myoffers` (Sell on the hub, then Weekly offers). You approve them at `#/adminoffers`, which also has the "Send alert" button. Publish the latest `firestore.rules` first (it adds the `offers` collection and the vendor `address` and `map` fields).
 
 ### Turn on the phone alerts (OneSignal, free)
-1. Create a new OneSignal app for Dargah Hub (do not reuse the Noor app). Choose Web Push, site URL `https://dargah-hub.vercel.app`, and under advanced settings use the service worker path `push/onesignal/OneSignalSDKWorker.js` with scope `/push/onesignal/`.
+1. Create a new OneSignal app for Dargah Hub (do not reuse the Noor app). Choose Web Push, site URL `https://dargah-hub.vercel.app`. Leave the service worker settings at their defaults. The site serves `OneSignalSDKWorker.js` at its root, and that one file also runs the app's offline cache.
 2. Put the public App ID in `js/config.js` as `onesignalAppId`. This makes the "Turn on offer alerts" button appear on the Offers page.
 3. In Vercel, Project Settings, Environment Variables, add `ONESIGNAL_APP_ID` and `ONESIGNAL_API_KEY` (the REST API key). Never put the REST key in the code or in a chat. Redeploy.
 4. Sign in as admin, open `#/adminoffers`, approve this week's offers, and press Send alert. Only your admin sign-in can send.
