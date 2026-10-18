@@ -70,6 +70,26 @@ service cloud.firestore {
         && d.createdAt == request.time;
     }
 
+    function okClaim(d) {
+      return d.keys().hasOnly(['uid','email','targetType','targetId','targetName','name','phone','message','status','createdAt'])
+        && d.uid == request.auth.uid
+        && d.targetType in ['d','v']
+        && d.targetId is string && d.targetId.size() > 0 && d.targetId.size() <= 120
+        && d.targetName is string && d.targetName.size() <= 120
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 80
+        && d.phone is string && d.phone.size() >= 8 && d.phone.size() <= 30
+        && d.message is string && d.message.size() <= 1000
+        && d.email is string && d.email.size() <= 120
+        && d.status == 'new'
+        && d.createdAt == request.time;
+    }
+    function okOwnerEdit(d) {
+      return d.get('about', '').size() <= 3000 && d.get('tagline', '').size() <= 120 && d.get('address', '').size() <= 200
+        && d.get('phone', '').size() <= 30 && d.get('whatsapp', '').size() <= 20 && d.get('email', '').size() <= 120
+        && d.get('website', '').size() <= 300 && d.get('map', '').size() <= 500
+        && d.get('timings', []).size() <= 10 && d.get('events', []).size() <= 12;
+    }
+
     // Admins are added by hand in the Firebase console (a document whose id is the admin's user id).
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
@@ -111,6 +131,22 @@ service cloud.firestore {
     match /reports/{id} {
       allow create: if okReport(request.resource.data);
       allow read, update, delete: if isAdmin();
+    }
+
+    // Dargah pages. Admins import and manage them. After a claim is approved the keeper (ownerUid) may edit the descriptive fields only.
+    match /dargahs/{id} {
+      allow read: if resource.data.hidden == false || isAdmin() || (signedIn() && resource.data.get('ownerUid', '') == request.auth.uid);
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && resource.data.get('ownerUid', '') == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tagline','about','address','phone','whatsapp','email','website','map','lat','lon','timings','events','confirmed','lastVerified','updatedAt'])
+        && okOwnerEdit(request.resource.data));
+    }
+
+    // Claims: a signed-in keeper or shop owner asks to take over a page the Hub team listed.
+    match /claims/{id} {
+      allow create: if signedIn() && okClaim(request.resource.data);
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
   }
 }

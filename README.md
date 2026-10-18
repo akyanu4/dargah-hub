@@ -8,6 +8,9 @@ Vendors sign in at `#/sell`, either list an existing shop (link out) or create a
 ## Buying and selling
 Buyers add vendor items to a cart and send an order request (no account, no payment). Each vendor receives its own order in `#/sell` and updates its status. Payment and delivery happen directly between buyer and vendor. See `SETUP-VENDORS.md`.
 
+## Onboarding for the Hub team
+Vendors and dargahs can be added in bulk from CSV files in `#/admin` > Import, and keepers or shop owners can later claim their page. See `SETUP-VENDORS.md`.
+
 ## Run locally
 `python3 -m http.server 8000` then open http://localhost:8000
 

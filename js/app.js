@@ -55,7 +55,7 @@
     dargahs: function () { return '<div class="dgl">' + D.dargahs.map(dcard).join('') + '</div><p class="muted">Are you a keeper? <a href="#/join"><b>List your dargah</b></a>.</p>'; },
     tools: function () { return '<div class="tgrid">' + TOOLS.map(toolTile).join('') + '</div>'; },
     more: function () {
-      return '<div class="list"><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
+      return '<div class="list"><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/mydargah"><span>Keeper: edit my dargah page</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
         '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
     },
     dargah: function (id) {
@@ -78,6 +78,7 @@
       var cover = photos[0] ? '<img class="cover" alt="' + esc(photos[0].caption) + '" src="' + esc(photos[0].src) + '">' : '';
       return '<div class="hero dh">' + cover + '<div class="hb"><h1>' + esc(d.name) + '</h1><p>' + esc(d.city) + (d.tagline ? '. ' + esc(d.tagline) : '') + '</p><div>' + sampleTag(d) + verTag(d) + '</div></div></div>' +
         '<div class="acts">' + acts + '</div>' +
+        (d.live ? (d.confirmed ? '<div class="box"><span class="tag v">Confirmed by the dargah</span>' + (d.updated ? '<div class="muted">Last verified ' + esc(d.updated) + '</div>' : '') + '</div>' : '<div class="box"><b>Listed by Dargah Hub</b><div class="muted">This page has not been confirmed by the dargah yet.' + (d.source ? ' Source: ' + esc(d.source) + '.' : '') + '</div><a class="btn ghost sm" style="margin-top:8px" href="#/claim/d/' + esc(d.id) + '">Is this your dargah? Claim it</a></div>') : '') +
         (about.length ? '<h2>About</h2><div class="box">' + about.map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('') + '</div>' : '') +
         (d.facts && d.facts.length ? '<div class="box facts">' + d.facts.map(function (f) { return '<div class="irow"><span>' + esc(f[0]) + '</span><div>' + esc(f[1]) + '</div></div>'; }).join('') + '</div>' : '') +
         (info ? '<h2>Visit and contact</h2><div class="box facts">' + info + '</div>' : '<div class="box muted">Contact details have not been added yet. The keeper can send them through <a href="#/join"><b>Join</b></a>.</div>') +
@@ -114,7 +115,7 @@
     },
     vendor: function (id) {
       var v = vendor(id); if (!v) return nf();
-      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a></p>' : '');
+      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a>' + (String(v.id).indexOf('imp-') === 0 ? ' · Listed by Dargah Hub. <a href="#/claim/v/' + esc(v.id) + '"><b>Is this your shop? Claim it</b></a>' : '') + '</p>' : '');
     },
     join: function () {
       var mail = 'mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=';
@@ -133,8 +134,13 @@
   function slug(t) { return String(t || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other'; }
   var STATIC = null, liveAt = 0;
   function merge(live) {
-    if (!STATIC) STATIC = { v: D.vendors.slice(), p: D.products.slice(), c: D.categories.map(function (c) { return { id: c.id, name: c.name }; }) };
-    D.vendors = STATIC.v.slice(); D.products = STATIC.p.slice(); D.categories = STATIC.c.map(function (c) { return { id: c.id, name: c.name }; }); liveAt = Date.now();
+    if (!STATIC) STATIC = { d: D.dargahs.slice(), v: D.vendors.slice(), p: D.products.slice(), c: D.categories.map(function (c) { return { id: c.id, name: c.name }; }) };
+    D.dargahs = STATIC.d.slice(); D.vendors = STATIC.v.slice(); D.products = STATIC.p.slice(); D.categories = STATIC.c.map(function (c) { return { id: c.id, name: c.name }; }); liveAt = Date.now();
+    function paras(t) { return String(t || '').split(/\n{2,}|\s\|\|\s/).map(function (x) { return x.trim(); }).filter(Boolean); }
+    (live.dargahs || []).forEach(function (g) {
+      if (D.dargahs.some(function (x) { return x.id === g.id; })) return;
+      D.dargahs.push({ id: g.id, name: g.name, short: g.name, city: g.city || '', tagline: g.tagline || '', about: Array.isArray(g.about) ? g.about : paras(g.about), address: g.address || '', phone: g.phone || '', whatsapp: g.whatsapp || '', email: g.email || '', website: g.website || '', map: g.map || '', lat: typeof g.lat === 'number' ? g.lat : undefined, lon: typeof g.lon === 'number' ? g.lon : undefined, timings: g.timings || [], events: g.events || [], gallery: g.gallery || [], videos: g.videos || [], updated: g.lastVerified || '', verified: !!g.verified, confirmed: !!g.confirmed, source: g.source || '', live: true });
+    });
     live.vendors.forEach(function (v) { if (D.vendors.some(function (x) { return x.id === v.id; })) return; D.vendors.push({ id: v.id, name: v.name, city: v.city, about: v.about, type: v.type, shopUrl: v.shopUrl, whatsapp: v.whatsapp, phone: v.phone, verified: !!v.verified, delivery: v.delivery || '', contactEmail: v.contactEmail || '', live: true }); });
     live.products.forEach(function (p) {
       var v = vendor(p.vendorId), c = slug(p.cat); if (!v) return;
@@ -153,7 +159,7 @@
   function nf() { return '<h2>Not found</h2><p><a href="#/">Go home</a></p>'; }
 
   var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise', cart: 'Cart' };
-  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more' };
+  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more', claim: 'more', mydargah: 'more' };
   var timer = null;
   document.addEventListener('input', function (e) {
     if (!e.target || e.target.id !== 'q') return; var q = e.target.value.trim().toLowerCase(), box = document.getElementById('plist'); if (!box) return;

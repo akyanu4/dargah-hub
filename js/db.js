@@ -13,7 +13,7 @@
   function mockStore() { try { return JSON.parse(localStorage.getItem('hub_mock') || '{}'); } catch (e) { return {}; } }
   function mockSave(s) { try { localStorage.setItem('hub_mock', JSON.stringify(s)); } catch (e) {} }
   function mockImpl() {
-    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.user = s.user || null;
+    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.dargahs = s.dargahs || {}; s.claims = s.claims || {}; s.user = s.user || null;
     function save() { mockSave(s); }
     api.user = s.user; var im = {};
     im.signIn = function (email) { s.user = { uid: 'u_' + email.replace(/\W/g, ''), email: email }; api.user = s.user; save(); emit(); return Promise.resolve(); };
@@ -27,7 +27,7 @@
     im.myProducts = function () { return Promise.resolve(Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return p.vendorId === s.user.uid; })); };
     im.saveProduct = function (d) { var id = d.id || 'm' + Date.now(); s.products[id] = Object.assign({}, s.products[id] || {}, d, { id: id, vendorId: s.user.uid }); save(); return Promise.resolve(id); };
     im.deleteProduct = function (id) { delete s.products[id]; save(); return Promise.resolve(); };
-    im.live = function () { var vs = Object.keys(s.vendors).map(function (k) { return s.vendors[k]; }).filter(function (v) { return v.status === 'approved'; }); var ok = {}; vs.forEach(function (v) { ok[v.id] = 1; }); return Promise.resolve({ vendors: vs, products: Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }) }); };
+    im.live = function () { var vs = Object.keys(s.vendors).map(function (k) { return s.vendors[k]; }).filter(function (v) { return v.status === 'approved'; }); var ok = {}; vs.forEach(function (v) { ok[v.id] = 1; }); return Promise.resolve({ vendors: vs, products: Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }), dargahs: Object.keys(s.dargahs).map(function (k) { return s.dargahs[k]; }).filter(function (g) { return !g.hidden; }) }); };
     im.adminVendors = function () { return Promise.resolve(Object.keys(s.vendors).map(function (k) { return s.vendors[k]; })); };
     im.adminSetStatus = function (uid, st) { s.vendors[uid].status = st; save(); return Promise.resolve(); };
     function list(o) { return Object.keys(o).map(function (k) { return o[k]; }); }
@@ -45,8 +45,19 @@
     im.adminSetVerified = function (uid, v) { s.vendors[uid].verified = !!v; save(); return Promise.resolve(); };
     im.adminHideProduct = function (id) { if (s.products[id]) s.products[id].hidden = true; save(); return Promise.resolve(); };
     im.adminOrders = function () { return Promise.resolve(list(s.orders)); };
-    im.adminImport = function (pack) { pack.vendors.forEach(function (v) { s.vendors[v.id] = Object.assign({}, v.data, { id: v.id }); }); pack.products.forEach(function (p) { s.products[p.id] = Object.assign({}, p.data, { id: p.id }); }); save(); return Promise.resolve(); };
+    im.adminImport = function (pack) { var skipped = []; (pack.dargahs || []).forEach(function (g) { if (s.dargahs[g.id] && s.dargahs[g.id].ownerUid) { skipped.push(g.id); return; } s.dargahs[g.id] = Object.assign({}, g.data, { id: g.id }); }); pack.vendors.forEach(function (v) { s.vendors[v.id] = Object.assign({}, v.data, { id: v.id }); }); pack.products.forEach(function (p) { s.products[p.id] = Object.assign({}, p.data, { id: p.id }); }); save(); return Promise.resolve({ skipped: skipped }); };
     im.adminDeleteVendor = function (id) { Object.keys(s.products).forEach(function (k) { if (s.products[k].vendorId === id) delete s.products[k]; }); delete s.vendors[id]; save(); return Promise.resolve(); };
+    im.adminDargahs = function () { return Promise.resolve(list(s.dargahs)); };
+    im.adminUpdateDargah = function (id, f) { Object.assign(s.dargahs[id], f); save(); return Promise.resolve(); };
+    im.adminDeleteDargah = function (id) { delete s.dargahs[id]; save(); return Promise.resolve(); };
+    im.createClaim = function (o) { var id = nid('c'); s.claims[id] = Object.assign({}, o, { id: id, uid: s.user.uid, email: s.user.email, status: 'new', createdAt: Date.now() }); save(); return Promise.resolve(id); };
+    im.myClaims = function () { return Promise.resolve(list(s.claims).filter(function (c) { return c.uid === s.user.uid; })); };
+    im.adminClaims = function () { return Promise.resolve(list(s.claims)); };
+    im.adminSetClaim = function (id, st) { s.claims[id].status = st; save(); return Promise.resolve(); };
+    im.adminSetDargahOwner = function (id, uid) { s.dargahs[id].ownerUid = uid; save(); return Promise.resolve(); };
+    im.adminTransferVendor = function (oldId, uid) { var v = s.vendors[oldId]; if (!v) return Promise.reject(new Error('Vendor not found')); if (s.vendors[uid]) return Promise.reject(new Error('That user already has a vendor account. Merge by hand.')); s.vendors[uid] = Object.assign({}, v, { id: uid, status: 'approved' }); Object.keys(s.products).forEach(function (k) { if (s.products[k].vendorId === oldId) s.products[k].vendorId = uid; }); delete s.vendors[oldId]; save(); return Promise.resolve(); };
+    im.myDargahs = function () { return Promise.resolve(list(s.dargahs).filter(function (g) { return g.ownerUid === s.user.uid; })); };
+    im.saveMyDargah = function (id, f) { if (s.dargahs[id].ownerUid !== s.user.uid) return Promise.reject(new Error('Not your dargah')); Object.assign(s.dargahs[id], f); save(); return Promise.resolve(); };
     return im;
   }
 
@@ -79,9 +90,9 @@
     im.deleteProduct = function (id) { return boot().then(function (x) { return x.fs.deleteDoc(x.fs.doc(db, 'products', id)); }); };
     im.live = function () {
       return boot().then(function (x) {
-        return Promise.all([x.fs.getDocs(x.fs.query(x.fs.collection(db, 'vendors'), x.fs.where('status', '==', 'approved'))), x.fs.getDocs(x.fs.collection(db, 'products'))]).then(function (r) {
+        return Promise.all([x.fs.getDocs(x.fs.query(x.fs.collection(db, 'vendors'), x.fs.where('status', '==', 'approved'))), x.fs.getDocs(x.fs.collection(db, 'products')), x.fs.getDocs(x.fs.query(x.fs.collection(db, 'dargahs'), x.fs.where('hidden', '==', false))).catch(function () { return { docs: [] }; })]).then(function (r) {
           var vs = r[0].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }), ok = {}; vs.forEach(function (v) { ok[v.id] = 1; });
-          return { vendors: vs, products: r[1].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }) };
+          return { vendors: vs, products: r[1].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }), dargahs: r[2].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }) };
         });
       });
     };
@@ -104,11 +115,15 @@
     im.adminOrders = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'orders')).then(function (q) { return q.docs.map(ord); }); }); };
     im.adminImport = function (pack) {
       return boot().then(function (x) {
-        var ops = pack.vendors.map(function (v) { return ['vendors', v.id, v.data]; }).concat(pack.products.map(function (p) { return ['products', p.id, p.data]; })), chain = Promise.resolve();
+        var claimedP = (pack.dargahs && pack.dargahs.length) ? x.fs.getDocs(x.fs.collection(db, 'dargahs')).then(function (q) { var m = {}; q.docs.forEach(function (d) { if (d.data().ownerUid) m[d.id] = 1; }); return m; }) : Promise.resolve({});
+        return claimedP.then(function (claimed) {
+        var skipped = []; pack = Object.assign({}, pack, { dargahs: (pack.dargahs || []).filter(function (g) { if (claimed[g.id]) { skipped.push(g.id); return false; } return true; }) });
+        var ops = pack.vendors.map(function (v) { return ['vendors', v.id, v.data]; }).concat(pack.products.map(function (p) { return ['products', p.id, p.data]; })).concat((pack.dargahs || []).map(function (g) { return ['dargahs', g.id, g.data]; })), chain = Promise.resolve();
         for (var i = 0; i < ops.length; i += 400) (function (part) {
           chain = chain.then(function () { var b = x.fs.writeBatch(db); part.forEach(function (o) { b.set(x.fs.doc(db, o[0], o[1]), Object.assign({}, o[2], { updatedAt: x.fs.serverTimestamp() })); }); return b.commit(); });
         })(ops.slice(i, i + 400));
-        return chain;
+        return chain.then(function () { return { skipped: skipped }; });
+        });
       });
     };
     im.adminDeleteVendor = function (id) {
@@ -118,11 +133,34 @@
         }).then(function () { return x.fs.deleteDoc(x.fs.doc(db, 'vendors', id)); });
       });
     };
+    function docs(q) { return q.docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }); }
+    im.adminDargahs = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'dargahs')).then(docs); }); };
+    im.adminUpdateDargah = function (id, f) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'dargahs', id), f); }); };
+    im.adminDeleteDargah = function (id) { return boot().then(function (x) { return x.fs.deleteDoc(x.fs.doc(db, 'dargahs', id)); }); };
+    im.createClaim = function (o) { return boot().then(function (x) { return x.fs.addDoc(x.fs.collection(db, 'claims'), Object.assign({}, o, { uid: auth.currentUser.uid, email: auth.currentUser.email || '', status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
+    im.myClaims = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'claims'), x.fs.where('uid', '==', auth.currentUser.uid))).then(function (q) { return docs(q).map(function (c) { c.createdAt = ms(c.createdAt); return c; }); }); }); };
+    im.adminClaims = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'claims')).then(function (q) { return docs(q).map(function (c) { c.createdAt = ms(c.createdAt); return c; }); }); }); };
+    im.adminSetClaim = function (id, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'claims', id), { status: st }); }); };
+    im.adminSetDargahOwner = function (id, uid) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'dargahs', id), { ownerUid: uid }); }); };
+    im.adminTransferVendor = function (oldId, uid) {
+      return boot().then(function (x) {
+        var fs = x.fs;
+        return fs.getDoc(fs.doc(db, 'vendors', oldId)).then(function (d) {
+          if (!d.exists()) throw new Error('Vendor not found');
+          var data = d.data(); data.status = 'approved';
+          return fs.getDoc(fs.doc(db, 'vendors', uid)).then(function (ex) { if (ex.exists()) throw new Error('That user already has a vendor account. Merge by hand.'); return fs.setDoc(fs.doc(db, 'vendors', uid), data); });
+        }).then(function () { return fs.getDocs(fs.query(fs.collection(db, 'products'), fs.where('vendorId', '==', oldId))); })
+          .then(function (q) { return Promise.all(q.docs.map(function (p) { var pd = p.data(); pd.vendorId = uid; return fs.addDoc(fs.collection(db, 'products'), pd).then(function () { return fs.deleteDoc(p.ref); }); })); })
+          .then(function () { return fs.deleteDoc(fs.doc(db, 'vendors', oldId)); });
+      });
+    };
+    im.myDargahs = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'dargahs'), x.fs.where('ownerUid', '==', auth.currentUser.uid))).then(docs); }); };
+    im.saveMyDargah = function (id, f) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'dargahs', id), Object.assign({}, f, { updatedAt: x.fs.serverTimestamp() })); }); };
     return im;
   }
 
   var impl = api.mode === 'firebase' ? fbImpl() : api.mode === 'mock' ? mockImpl() : null;
-  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor'].forEach(function (k) {
+  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah'].forEach(function (k) {
     api[k] = function () { return impl && impl[k] ? impl[k].apply(null, arguments) : Promise.reject(new Error('Vendor accounts are not switched on yet.')); };
   });
   if (impl && impl.init) impl.init().catch(function () {});

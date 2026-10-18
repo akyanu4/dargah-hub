@@ -41,6 +41,13 @@ These use three more collections, created automatically on first use: `orders`, 
 ## Bulk import (Admin > Import)
 Add many vendors and items from a spreadsheet. In `#/admin` open **Import**, download the template, fill one row per item (vendor columns repeat), save as **CSV (UTF-8)**, upload, check the preview, and import. Uploading the same vendor and item names again updates them. Imported vendors have no sign-in: you manage their orders in the **Orders** tab, and can delete a vendor with its items from **Vendors**. This needs the latest `firestore.rules` published (admins may now create vendors and items).
 
+## Onboarding dargahs and claims (added 18 Oct 2026)
+- **Import dargahs:** in `#/admin` > **Import**, download the **Dargahs template**, fill one row per dargah (about, address, phone, timings, events, YouTube links, up to 6 photo links, source, confirmed), save as CSV (UTF-8) and upload. The file type is detected from the column names. Pages appear in **Dargahs** and in the app at once, labelled "Listed by Dargah Hub, not yet confirmed" until confirmed.
+- **Photos** are https links only (files you host, or links the dargah gives you). Get permission first.
+- **Claim:** every imported dargah page and imported shop page has a "Claim it" link. The keeper signs in and sends a short form. You see it in **Claims**, check with the dargah (call a number you trust), then **Approve**. For a dargah this lets the keeper edit its page at `#/mydargah` (saving marks it Confirmed with today's date). For a shop it moves the shop, its items and future orders to the owner's own account. Old orders stay in your Orders tab.
+- Re-importing a dargah file never overwrites a page a keeper has claimed.
+- Publish the latest `firestore.rules` (new `dargahs` and `claims` collections) before using any of this.
+
 ## How it works
 - A vendor signs up, creates a profile (either "I already have a shop" with a link, or "I do not have a shop"), and waits for approval.
 - Once approved they can add items (name, category, price, description, up to three photos, sold-out switch). Photos are resized on the phone and kept inside the item record, so no paid storage is needed.
