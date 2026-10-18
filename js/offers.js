@@ -219,6 +219,8 @@
           '<h2>Add an offer for a vendor</h2><form class="box" id="nf"><label class="fld">Vendor<select id="nv">' + vs.filter(function (v) { return v.status === 'approved'; }).map(function (v) { return '<option value="' + esc(v.id) + '">' + esc(v.name) + '</option>'; }).join('') + '</select></label>' +
           '<label class="fld">Title<input id="nt" maxlength="80" required></label><label class="fld">Discount tag (optional)<input id="nd" maxlength="40"></label><label class="fld">Details<textarea id="nx" rows="2" maxlength="300"></textarea></label>' +
           '<label class="fld">When<select id="nw">' + ws.map(function (w) { return '<option value="' + w.key + '">' + esc(w.name) + ': ' + esc(w.range) + '</option>'; }).join('') + '</select></label><button class="btn full" type="submit">Add and publish</button></form>' +
+          '<h2>Redeem a code for a shop</h2><form class="box" id="arf"><div class="muted">For shops you added by import that have no login of their own. Check the code, then mark it used.</div><label class="fld">Code<input id="arc" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" required></label><button class="btn full" type="submit">Check code</button></form>' +
+          '<h2>Test offers</h2><div class="box"><div class="muted">Adds one sample offer, live this week, for every approved vendor whose name starts with "Test-". Remove them when you are done testing.</div><div class="mr"><button class="btn sm" type="button" data-test="add">Add test offers</button><button class="btn ghost sm" type="button" data-test="rm">Remove test offers</button></div></div>' +
           '<h2>Live this week (' + live.length + ')</h2>' + (live.map(function (o) { return row(o, ws); }).join('') || '<div class="box muted">None.</div>') +
           '<h2>Live next week (' + nxt.length + ')</h2>' + (nxt.map(function (o) { return row(o, ws); }).join('') || '<div class="box muted">None.</div>') +
           (old.length ? '<h2>Older or not approved</h2>' + old.map(function (o) { return row(o, ws); }).join('') : '');
@@ -233,11 +235,40 @@
       function done(p) { return p.then(function () { if (root.HubApp) root.HubApp.stale(); }).then(load).catch(function (er) { alert(er.message); }); }
       box.addEventListener('click', function (e) {
         var b = e.target.closest && e.target.closest('button'); if (!b) return;
+        if (b.hasAttribute('data-use')) { b.disabled = true; done(DB.redeemCode(b.getAttribute('data-use'))); return; }
+        if (b.getAttribute('data-test') === 'add') {
+          var ws0 = weeks(), tv = vs.filter(function (v) { return v.status === 'approved' && /^test[-\s]/i.test(v.name); });
+          if (!tv.length) { alert('No approved vendor named "Test-..." was found. Import test-vendors.csv with "Approve" ticked first.'); return; }
+          var T = [['20% off all attars', '20% off', 'Valid on all rose and oud attars.'], ['Buy 1 kg almonds, get 100 g free', 'Free 100 g', 'While stock lasts.'], ['Free delivery on orders above Rs 500', 'Free delivery', 'Within Hyderabad.'], ['10% off Seerah and Islamic history books', '10% off', 'Show your code at the counter.'], ['Buy 2 caps, get 1 free', 'Buy 2 get 1', 'Any style.']];
+          var have = os2.filter(function (o) { return o.week === ws0[0].key && /^TEST OFFER/.test(o.details || ''); }).map(function (o) { return o.vendorId; });
+          var todo = tv.filter(function (v) { return have.indexOf(v.id) < 0; }); if (!todo.length) { alert('Test offers already exist for this week.'); return; }
+          b.disabled = true; b.textContent = 'Adding…';
+          done(todo.reduce(function (p, v, i) { var t = T[i % T.length]; return p.then(function () { return DB.adminSaveOffer(v.id, { title: t[0], discount: t[1], details: 'TEST OFFER for testing only. ' + t[2], week: ws0[0].key }); }); }, Promise.resolve()));
+          return;
+        }
+        if (b.getAttribute('data-test') === 'rm') {
+          var tos = os2.filter(function (o) { return /^TEST OFFER/.test(o.details || ''); }); if (!tos.length) { alert('No test offers to remove.'); return; }
+          if (!confirm('Delete ' + tos.length + ' test offer' + (tos.length === 1 ? '' : 's') + '?')) return;
+          done(tos.reduce(function (p, o) { return p.then(function () { return DB.deleteOffer(o.id); }); }, Promise.resolve()));
+          return;
+        }
         if (b.hasAttribute('data-st')) done(DB.adminSetOffer(b.getAttribute('data-id'), b.getAttribute('data-st')));
         else if (b.hasAttribute('data-od') && confirm('Delete this offer?')) done(DB.deleteOffer(b.getAttribute('data-od')));
       });
       box.addEventListener('submit', function (e) {
         e.preventDefault(); var g = function (id) { return (document.getElementById(id) || {}).value || ''; };
+        if (e.target.id === 'arf') {
+          var f = e.target, code = cleanCode(g('arc')), say = function (h) { var n = f.querySelector('.note'); if (n) n.remove(); f.insertAdjacentHTML('beforeend', h); };
+          if (code.length !== 8) return say(note('A code has 8 letters and numbers.'));
+          DB.getRedemption(code).then(function (r) {
+            if (!r) return say(note('Code not found.'));
+            var o = os2.filter(function (x) { return x.id === r.offerId; })[0], t = (o ? o.title : 'Offer') + ' at ' + vname(r.vendorId);
+            if (r.status === 'redeemed') return say(note('Already used: ' + t));
+            if (Date.now() >= weekEnd(r.week).getTime()) return say(note('Expired: ' + t));
+            say('<div class="note ok"><b>Valid: ' + esc(t) + '</b><button class="btn full" type="button" data-use="' + esc(code) + '">Mark as used</button></div>');
+          }).catch(function (er) { say(note(er.message)); });
+          return;
+        }
         if (e.target.id === 'nf') {
           var d = { title: g('nt').trim(), discount: g('nd').trim(), details: g('nx').trim(), week: g('nw') };
           if (d.title.length < 3 || !g('nv')) { alert('Choose a vendor and add a title.'); return; }
