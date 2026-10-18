@@ -10,7 +10,8 @@ const PROJECT = 'siddiqgulshan-25903';
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST.' });
-  const appId = process.env.ONESIGNAL_APP_ID, key = process.env.ONESIGNAL_API_KEY;
+  const clean = (v) => String(v || '').replace(/[\s"']/g, '');
+  const appId = clean(process.env.ONESIGNAL_APP_ID), key = clean(process.env.ONESIGNAL_API_KEY);
   if (!appId || !key) return res.status(503).json({ error: 'Alerts are not set up yet. Add ONESIGNAL_APP_ID and ONESIGNAL_API_KEY in Vercel settings, then redeploy.' });
   const m = /^Bearer (.+)$/.exec(req.headers.authorization || '');
   if (!m) return res.status(401).json({ error: 'Please sign in again.' });
@@ -32,6 +33,7 @@ module.exports = async (req, res) => {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return res.status(502).json({ error: (j.errors && JSON.stringify(j.errors).slice(0, 200)) || 'OneSignal refused the alert.' });
-    return res.status(200).json({ ok: true, id: j.id || null });
+    if (!j.id) return res.status(409).json({ error: 'OneSignal accepted the request but nobody received it. No phone is subscribed yet, or the subscription is not active. Turn on alerts on the phone first.' });
+    return res.status(200).json({ ok: true, id: j.id });
   } catch (e) { return res.status(502).json({ error: 'Could not reach OneSignal. Try again.' }); }
 };

@@ -104,13 +104,14 @@
 
   /* ---------- alerts (OneSignal web push) ---------- */
   function appId() { return (root.HUB_CONFIG || {}).onesignalAppId || ''; }
-  var osState = 0;
+  var osState = 0, osErr = '';
+  function osStatus(O) { try { var u = O.User.PushSubscription; return 'Status: permission=' + (O.Notifications.permission ? 'allowed' : 'not allowed') + ', subscribed=' + (u.optedIn ? 'yes' : 'no') + ', id=' + (u.id ? String(u.id).slice(0, 8) + '…' : 'none') + (osErr ? ', error=' + osErr : ''); } catch (e) { return 'Status unavailable' + (osErr ? ': ' + osErr : ''); } }
   function os(cb) {
     root.OneSignalDeferred = root.OneSignalDeferred || [];
     if (!osState) {
       osState = 1; var sc = document.createElement('script'); sc.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'; sc.defer = true;
       sc.onerror = function () { osState = 0; cb(null); }; document.head.appendChild(sc);
-      root.OneSignalDeferred.push(function (O) { return O.init({ appId: appId(), serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js', serviceWorkerParam: { scope: '/push/onesignal/' }, notifyButton: { enable: false } }); });
+      root.OneSignalDeferred.push(function (O) { return Promise.resolve(O.init({ appId: appId(), serviceWorkerPath: 'push/onesignal/OneSignalSDKWorker.js', serviceWorkerParam: { scope: '/push/onesignal/' }, notifyButton: { enable: false } })).then(function () { osErr = ''; }, function (e) { osErr = String((e && e.message) || e || 'init failed').slice(0, 160); }); });
     }
     root.OneSignalDeferred.push(function (O) { cb(O); });
   }
@@ -121,6 +122,7 @@
   }
   function bindAlert(view) {
     var b = view.querySelector('#pushb'); if (!b) return;
+    if (lsGet('hub_push', 0)) os(function (O) { if (!O) return; setTimeout(function () { try { if (!O.User.PushSubscription.optedIn) { lsSet('hub_push', 0); b.textContent = 'Turn on offer alerts'; b.className = 'btn full'; var m0 = view.querySelector('#pushm'); if (m0) m0.innerHTML = note('Alerts were not active on this phone. Tap to turn them on.') + '<div class="muted">' + esc(osStatus(O)) + '</div>'; } } catch (e) {} }, 1500); });
     b.addEventListener('click', function () {
       var m = view.querySelector('#pushm'), on = lsGet('hub_push', 0); b.disabled = true; m.innerHTML = '';
       os(function (O) {
@@ -130,7 +132,8 @@
           var now = !on && O.User.PushSubscription.optedIn; lsSet('hub_push', now ? 1 : 0); b.disabled = false;
           b.textContent = now ? 'Alerts are on. Tap to turn off' : 'Turn on offer alerts'; b.className = 'btn' + (now ? ' ghost' : '') + ' full';
           m.innerHTML = !on && !now ? note('Notifications are blocked in your browser settings for this site.') : note(now ? 'Done. You will get an alert when new offers start.' : 'Alerts are off.', true);
-        }).catch(function () { b.disabled = false; m.innerHTML = note('Could not change the alert setting. Try again.'); });
+          setTimeout(function () { m.insertAdjacentHTML('beforeend', '<div class="muted">' + esc(osStatus(O)) + '</div>'); }, 1500);
+        }).catch(function (er) { b.disabled = false; m.innerHTML = note('Could not change the alert setting. Try again.') + '<div class="muted">' + esc(String((er && er.message) || er || '').slice(0, 160) + ' ' + osStatus(O)) + '</div>'; });
       });
     });
   }
