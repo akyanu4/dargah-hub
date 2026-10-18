@@ -36,7 +36,7 @@ service cloud.firestore {
         && d.get('soldOut', false) is bool;
     }
     function okOrder(d) {
-      return d.keys().hasOnly(['vendorId','vendorName','buyerName','buyerPhone','buyerAddress','note','items','total','code','discount','status','createdAt'])
+      return d.keys().hasOnly(['vendorId','vendorName','buyerName','buyerPhone','buyerAddress','note','items','total','code','discount','offerTitle','status','createdAt'])
         && d.vendorId is string && d.vendorId.size() > 0 && d.vendorId.size() <= 128
         && d.vendorName is string && d.vendorName.size() <= 80
         && d.buyerName is string && d.buyerName.size() >= 2 && d.buyerName.size() <= 80
@@ -47,6 +47,7 @@ service cloud.firestore {
         && d.total is number && d.total >= 0 && d.total < 100000000
         && d.status == 'new'
         && (('code' in d) == ('discount' in d))
+        && d.get('offerTitle', '') is string && d.get('offerTitle', '').size() <= 80
         && (!('code' in d) || okOrderCode(d))
         && d.createdAt == request.time;
     }
@@ -58,7 +59,7 @@ service cloud.firestore {
       return d.code is string && d.code.matches('^[A-HJ-KM-NP-Z2-9]{8}$')
         && r.status == 'issued' && r.vendorId == d.vendorId
         && request.time < r.createdAt + duration.value(7, 'd')
-        && o.status == 'approved' && o.vendorId == d.vendorId
+        && o.status == 'approved' && o.vendorId == d.vendorId && o.get('channel', 'both') in ['cart','both']
         && d.discount is number && d.discount > 0 && d.discount <= d.total
         && ((o.get('kind', 'other') == 'percent' && d.discount <= d.total * o.value / 100 + 1)
          || (o.get('kind', 'other') == 'flat' && d.discount <= o.value));
@@ -101,13 +102,14 @@ service cloud.firestore {
         && d.createdAt == request.time;
     }
     function okOffer(d) {
-      return d.keys().hasOnly(['vendorId','title','details','discount','week','kind','value','status','createdAt'])
+      return d.keys().hasOnly(['vendorId','title','details','discount','week','kind','value','channel','status','createdAt'])
         && d.vendorId is string
         && d.title is string && d.title.size() >= 3 && d.title.size() <= 80
         && d.details is string && d.details.size() <= 300
         && d.discount is string && d.discount.size() <= 40
         && d.week is string && d.week.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && d.get('kind', 'other') in ['percent','flat','other']
+        && d.get('channel', 'both') in ['shop','cart','both']
         && d.get('value', 0) is number && d.get('value', 0) >= 0 && d.get('value', 0) <= 100000
         && (d.get('kind', 'other') != 'percent' || d.get('value', 0) <= 90)
         && d.status in ['pending','approved','rejected'];

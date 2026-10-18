@@ -55,7 +55,7 @@
       if (r.status === 'redeemed') return { msg: 'This code was already used.' };
       if (Date.now() >= HO.weekEnd(r.week).getTime()) return { msg: 'This code has expired. Saved deals end on Wednesday.' };
       var o = HO.offerOf(r.offerId); if (!o) return { msg: 'This offer is no longer available.' };
-      if (o.kind !== 'percent' && o.kind !== 'flat') return { msg: 'This deal is used at the shop. Show the code there.' };
+      if ((o.kind !== 'percent' && o.kind !== 'flat') || HO.chan(o) === 'shop') return { msg: 'This deal is used at the shop. Show the code there.' };
       var v = H().vendor(o.vendorId) || {};
       if (!vendorSub(o.vendorId)) return { msg: 'Add an item from ' + (v.name || 'that shop') + ' to your cart to use this code.' };
       return { a: { code: code, vendorId: o.vendorId, offerId: o.id, title: o.title, kind: o.kind, value: o.value } };
@@ -133,7 +133,7 @@
     var btn = document.getElementById('bgo'); btn.disabled = true; btn.textContent = 'Sending…';
     (applied ? checkCode(applied.code) : Promise.resolve({})).then(function (r) {
       if (applied && !r.a) { var why = r.msg; applied = null; btn.disabled = false; btn.textContent = 'Send order request'; keep(el, function () { drawCart(el, note('Your offer code could not be used: ' + why + ' It was removed, so please check the total and send again.')); }); return null; }
-      if (applied) docs.forEach(function (dd) { if (dd.vendorId === applied.vendorId) { dd.code = applied.code; dd.discount = discountFor(applied, dd.total); } });
+      if (applied) docs.forEach(function (dd) { if (dd.vendorId === applied.vendorId) { dd.code = applied.code; dd.discount = discountFor(applied, dd.total); dd.offerTitle = String(applied.title || '').slice(0, 80); } });
       return DB.createOrders(docs);
     }).then(function (ids) {
       if (!ids) return;
@@ -151,12 +151,12 @@
   var STATUS = { new: ['Sent to the vendor', 'Waiting for the vendor to confirm.'], confirmed: ['Confirmed', 'The vendor has confirmed. Agree payment and delivery with them.'], shipped: ['On the way or ready', 'The vendor has shipped it or it is ready for pickup.'], delivered: ['Delivered', 'The vendor marked this order as delivered.'], cancelled: ['Cancelled', 'This order was cancelled.'] };
   function orderCard(o) {
     var v = H().vendor(o.vendorId) || {}, wa = digits(v.whatsapp), st = STATUS[o.status] || STATUS.new;
-    var msg = 'Hi, I placed order ' + o.id + ' on ' + D().platform.name + ':\n' + (o.items || []).map(function (i) { return '- ' + i.qty + ' x ' + i.name; }).join('\n') + '\nTotal of items: ' + money(o.total) + (o.code ? '\nOffer code ' + o.code + ': -' + money(o.discount) + '\nTo pay: ' + money(Math.max(0, o.total - o.discount)) : '') + '\nName: ' + o.buyerName + '\nAddress: ' + o.buyerAddress;
+    var msg = 'Hi, I placed order ' + o.id + ' on ' + D().platform.name + ':\n' + (o.items || []).map(function (i) { return '- ' + i.qty + ' x ' + i.name; }).join('\n') + '\nTotal of items: ' + money(o.total) + (o.code ? '\nOffer: ' + (o.offerTitle || 'code') + '\nOffer code ' + o.code + ': -' + money(o.discount) + '\nTo pay: ' + money(Math.max(0, o.total - o.discount)) : '') + '\nName: ' + o.buyerName + '\nAddress: ' + o.buyerAddress;
     return '<div class="box"><div><span class="tag' + (o.status === 'delivered' || o.status === 'confirmed' ? ' v' : '') + '">' + esc(st[0]) + '</span></div><b>' + esc(o.vendorName || v.name || 'Vendor') + '</b>' +
       '<div class="muted">' + esc(st[1]) + '</div>' +
       (o.items || []).map(function (i) { return '<div class="cl"><div class="cb">' + esc(i.qty) + ' × ' + esc(i.name) + '</div><div class="ct">' + money(i.price * i.qty) + '</div></div>'; }).join('') +
       '<div class="cl tot"><div class="cb"><b>Total of items</b></div><div class="ct">' + money(o.total) + '</div></div>' +
-      (o.code ? '<div class="cl"><div class="cb">Offer code ' + esc(String(o.code).slice(0, 4) + '-' + String(o.code).slice(4)) + '</div><div class="ct">−' + money(o.discount) + '</div></div><div class="cl tot"><div class="cb"><b>To pay the vendor</b></div><div class="ct">' + money(Math.max(0, o.total - o.discount)) + '</div></div><div class="muted">The vendor spends the code when they confirm. If it was already used elsewhere, the vendor will tell you.</div>' : '') +
+      (o.code ? '<div class="cl"><div class="cb">' + (o.offerTitle ? esc(o.offerTitle) + '<br>' : '') + 'Offer code ' + esc(String(o.code).slice(0, 4) + '-' + String(o.code).slice(4)) + '</div><div class="ct">−' + money(o.discount) + '</div></div><div class="cl tot"><div class="cb"><b>To pay the vendor</b></div><div class="ct">' + money(Math.max(0, o.total - o.discount)) + '</div></div><div class="muted">The vendor spends the code when they confirm. If it was already used elsewhere, the vendor will tell you.</div>' : '') +
       (o.vendorNote ? '<div class="box"><b>Message from the vendor</b><div>' + esc(o.vendorNote) + '</div></div>' : '') +
       '<div class="muted">Order ID <b>' + esc(o.id) + '</b>' + (o.createdAt ? ' · ' + esc(when(o.createdAt)) : '') + '</div>' +
       (wa && o.status !== 'cancelled' ? '<a class="btn full" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '?text=' + encodeURIComponent(msg) + '">Send this order on WhatsApp</a>' : '') +
