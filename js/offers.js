@@ -41,7 +41,7 @@
   function lastDay(c) { return new Date(until(c) - 12 * 36e5); }
   function left(c) { var d = Math.ceil((until(c) - Date.now()) / 864e5); return d <= 0 ? 'expired' : d === 1 ? 'last day' : d + ' days left'; }
   function codeBox(c) {
-    return '<div class="codebox"><div class="muted">Show this code at the shop</div><div class="code">' + esc(showCode(c.code)) + '</div><div class="muted">One use. Use it by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + '). <a href="#/mycodes"><b>My saved deals</b></a></div></div>';
+    return '<div class="codebox"><div class="muted">Show this code at the shop</div><div class="code">' + esc(showCode(c.code)) + '</div><div class="muted">One use. Use it by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + '). <a href="#/mycodes"><b>My saved deals</b></a></div>' + onlineNote(c) + '</div>';
   }
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-claim]'); if (!b) return;
@@ -131,6 +131,31 @@
     });
   }
 
+  /* ---------- discount type, and using a code on an order ---------- */
+  function withKind(d, kind, val) {
+    kind = ['percent', 'flat', 'other'].indexOf(kind) >= 0 ? kind : 'other'; var v = Math.max(0, Math.round(parseFloat(val) || 0));
+    if (kind === 'percent' && (v < 1 || v > 90)) d.err = 'For a percent offer, the value must be between 1 and 90.';
+    if (kind === 'flat' && v < 1) d.err = 'For an amount offer, add the amount off.';
+    if (kind === 'other') v = 0;
+    d.kind = kind; d.value = v;
+    if (!d.discount) d.discount = kind === 'percent' ? v + '% off' : kind === 'flat' ? 'Rs ' + v + ' off' : '';
+    return d;
+  }
+  function offerOf(id) { return (D().offers || []).filter(function (o) { return o.id === id; })[0]; }
+  function onlineNote(c) {
+    var o = offerOf(c.offerId); if (!o || (o.kind !== 'percent' && o.kind !== 'flat')) return '<div class="muted">Use this deal at the shop.</div>';
+    return '<div class="muted">Ordering online? Enter this code in your <a href="#/cart"><b>cart</b></a> and the discount is applied.</div>';
+  }
+  /* Called when a vendor or admin confirms an order that carries an offer code: the code is spent now, once. */
+  function useCode(order) {
+    if (!order || !order.code) return Promise.resolve();
+    return DB.getRedemption(order.code).then(function (r) {
+      if (!r) throw new Error('The offer code on this order was not found. Check with the buyer before you confirm.');
+      if (r.status === 'redeemed') throw new Error('This offer code was already used on another order, so the discount does not apply here. Cancel this order or tell the buyer before you confirm.');
+      return DB.redeemCode(order.code);
+    });
+  }
+
   /* ---------- public page ---------- */
   S.offers = function () {
     return { title: 'Weekly offers', html: '<div id="ov2"></div>', bind: function (view) {
@@ -158,7 +183,8 @@
         box.innerHTML = '<p><a href="#/sell"><b>‹ Back to my shop</b></a></p><h1>Weekly offers</h1><p class="muted">Offers run Thursday to Thursday. We approve each one before people see it.</p>' +
           '<form class="box" id="rf"><b>Customer has a code?</b><div class="muted">Ask to see their code on their phone, type it here, and mark it used. Each code works once, on any day until Wednesday of the offer week.</div><label class="fld">Code<input id="rc" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" required></label><button class="btn full" type="submit">Check code</button>' + rmsg + '</form>' +
           '<form class="box" id="of"><b>New offer</b><label class="fld">Offer title<input id="ot" maxlength="80" required placeholder="For example: 20% off all attars"></label>' +
-          '<label class="fld">Discount tag (optional)<input id="od" maxlength="40" placeholder="20% off, Buy 1 get 1, Free delivery"></label>' +
+          '<label class="fld">Discount tag (optional)<input id="od" maxlength="40" placeholder="Shown on the offer. Filled in for you if left empty"></label>' +
+          '<label class="fld">Discount type<select id="ok"><option value="percent">Percent off (also works in the cart)</option><option value="flat">Amount off (also works in the cart)</option><option value="other">Other deal, used at the shop (for example Buy 2 get 1)</option></select></label><label class="fld">Value (percent or amount, leave 0 for other deals)<input id="ov" type="number" min="0" max="100000" step="1" placeholder="For example 20" inputmode="numeric"></label>' +
           '<label class="fld">Details<textarea id="ox" rows="3" maxlength="300" placeholder="What is included, any conditions"></textarea></label>' +
           '<label class="fld">When<select id="ow">' + ws.map(function (w) { return '<option value="' + w.key + '">' + esc(w.name) + ': ' + esc(w.range) + '</option>'; }).join('') + '</select></label>' +
           (vendor.address ? '' : '<div class="muted">Tip: add your shop address in Edit details so people can visit you.</div>') +
@@ -182,8 +208,9 @@
           }).catch(function (er) { say(er.message || 'Could not check the code.'); });
           return;
         }
-        var d = { title: g('ot').trim(), discount: g('od').trim(), details: g('ox').trim(), week: g('ow') };
+        var d = withKind({ title: g('ot').trim(), discount: g('od').trim(), details: g('ox').trim(), week: g('ow') }, g('ok'), g('ov'));
         if (d.title.length < 3) { box.insertAdjacentHTML('beforeend', note('Add a short title for the offer.')); return; }
+        if (d.err) { box.insertAdjacentHTML('beforeend', note(d.err)); return; }
         DB.saveOffer(d).then(function () { msg = note('Sent. It will go live once approved.', true); load(); }).catch(function (er) { box.insertAdjacentHTML('beforeend', note(er.message)); });
       });
       box.addEventListener('click', function (e) {
@@ -217,7 +244,9 @@
           '<button class="btn full" type="submit"' + (live.length ? '' : ' disabled') + '>Send alert</button>' + (live.length ? '' : '<div class="muted">Approve at least one offer for this week first.</div>') + '</form>' +
           '<h2>Waiting for approval' + (pend.length ? ' <span class="cnt">' + pend.length + '</span>' : '') + '</h2>' + (pend.length ? pend.map(function (o) { return row(o, ws); }).join('') : '<div class="box muted">Nothing waiting.</div>') +
           '<h2>Add an offer for a vendor</h2><form class="box" id="nf"><label class="fld">Vendor<select id="nv">' + vs.filter(function (v) { return v.status === 'approved'; }).map(function (v) { return '<option value="' + esc(v.id) + '">' + esc(v.name) + '</option>'; }).join('') + '</select></label>' +
-          '<label class="fld">Title<input id="nt" maxlength="80" required></label><label class="fld">Discount tag (optional)<input id="nd" maxlength="40"></label><label class="fld">Details<textarea id="nx" rows="2" maxlength="300"></textarea></label>' +
+          '<label class="fld">Title<input id="nt" maxlength="80" required></label><label class="fld">Discount tag (optional)<input id="nd" maxlength="40"></label>' +
+          '<label class="fld">Discount type<select id="nk"><option value="percent">Percent off (also works in the cart)</option><option value="flat">Amount off (also works in the cart)</option><option value="other">Other deal, used at the shop (for example Buy 2 get 1)</option></select></label><label class="fld">Value (percent or amount, leave 0 for other deals)<input id="nvv" type="number" min="0" max="100000" step="1" placeholder="For example 20" inputmode="numeric"></label>' +
+          '<label class="fld">Details<textarea id="nx" rows="2" maxlength="300"></textarea></label>' +
           '<label class="fld">When<select id="nw">' + ws.map(function (w) { return '<option value="' + w.key + '">' + esc(w.name) + ': ' + esc(w.range) + '</option>'; }).join('') + '</select></label><button class="btn full" type="submit">Add and publish</button></form>' +
           '<h2>Redeem a code for a shop</h2><form class="box" id="arf"><div class="muted">For shops you added by import that have no login of their own. Check the code, then mark it used.</div><label class="fld">Code<input id="arc" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" required></label><button class="btn full" type="submit">Check code</button></form>' +
           '<h2>Test offers</h2><div class="box"><div class="muted">Adds one sample offer, live this week, for every approved vendor whose name starts with "Test-". Remove them when you are done testing.</div><div class="mr"><button class="btn sm" type="button" data-test="add">Add test offers</button><button class="btn ghost sm" type="button" data-test="rm">Remove test offers</button></div></div>' +
@@ -239,11 +268,11 @@
         if (b.getAttribute('data-test') === 'add') {
           var ws0 = weeks(), tv = vs.filter(function (v) { return v.status === 'approved' && /^test[-\s]/i.test(v.name); });
           if (!tv.length) { alert('No approved vendor named "Test-..." was found. Import test-vendors.csv with "Approve" ticked first.'); return; }
-          var T = [['20% off all attars', '20% off', 'Valid on all rose and oud attars.'], ['Buy 1 kg almonds, get 100 g free', 'Free 100 g', 'While stock lasts.'], ['Free delivery on orders above Rs 500', 'Free delivery', 'Within Hyderabad.'], ['10% off Seerah and Islamic history books', '10% off', 'Show your code at the counter.'], ['Buy 2 caps, get 1 free', 'Buy 2 get 1', 'Any style.']];
+          var T = [['20% off all attars', '20% off', 'Valid on all rose and oud attars.', 'percent', 20], ['Buy 1 kg almonds, get 100 g free', 'Free 100 g', 'While stock lasts. Used at the shop.', 'other', 0], ['Rs 50 off on honey', 'Rs 50 off', 'On any honey jar.', 'flat', 50], ['10% off Seerah and Islamic history books', '10% off', 'Show your code at the counter or use it in the cart.', 'percent', 10], ['Buy 2 caps, get 1 free', 'Buy 2 get 1', 'Used at the shop.', 'other', 0]];
           var have = os2.filter(function (o) { return o.week === ws0[0].key && /^TEST OFFER/.test(o.details || ''); }).map(function (o) { return o.vendorId; });
           var todo = tv.filter(function (v) { return have.indexOf(v.id) < 0; }); if (!todo.length) { alert('Test offers already exist for this week.'); return; }
           b.disabled = true; b.textContent = 'Adding…';
-          done(todo.reduce(function (p, v, i) { var t = T[i % T.length]; return p.then(function () { return DB.adminSaveOffer(v.id, { title: t[0], discount: t[1], details: 'TEST OFFER for testing only. ' + t[2], week: ws0[0].key }); }); }, Promise.resolve()));
+          done(todo.reduce(function (p, v, i) { var nm = String(v.name).toLowerCase(), ix = /attar/.test(nm) ? 0 : /dry|fruit/.test(nm) ? 1 : /honey|herb/.test(nm) ? 2 : /book/.test(nm) ? 3 : /topi|cap/.test(nm) ? 4 : i % T.length, t = T[ix]; return p.then(function () { return DB.adminSaveOffer(v.id, { title: t[0], discount: t[1], details: 'TEST OFFER for testing only. ' + t[2], week: ws0[0].key, kind: t[3], value: t[4] }); }); }, Promise.resolve()));
           return;
         }
         if (b.getAttribute('data-test') === 'rm') {
@@ -270,8 +299,9 @@
           return;
         }
         if (e.target.id === 'nf') {
-          var d = { title: g('nt').trim(), discount: g('nd').trim(), details: g('nx').trim(), week: g('nw') };
+          var d = withKind({ title: g('nt').trim(), discount: g('nd').trim(), details: g('nx').trim(), week: g('nw') }, g('nk'), g('nvv'));
           if (d.title.length < 3 || !g('nv')) { alert('Choose a vendor and add a title.'); return; }
+          if (d.err) { alert(d.err); return; }
           done(DB.adminSaveOffer(g('nv'), d)); return;
         }
         if (e.target.id === 'af') {
@@ -288,5 +318,5 @@
     } };
   };
 
-  root.HubOffers = { cleanCode: cleanCode, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
+  root.HubOffers = { weekEnd: weekEnd, cleanCode: cleanCode, useCode: useCode, offerOf: offerOf, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
 })(typeof self !== 'undefined' ? self : this);

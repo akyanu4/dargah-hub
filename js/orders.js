@@ -43,6 +43,30 @@
     return { title: 'Cart', html: '<div id="cv"></div>', bind: function (view) { drawCart(view.querySelector('#cv')); } };
   };
 
+  /* ---------- offer code in the cart ---------- */
+  var applied = null;
+  function vendorSub(vid) { return lines().filter(function (l) { return l.p.vendor === vid; }).reduce(function (n, l) { return n + l.p.price * l.q; }, 0); }
+  function discountFor(a, sub) { var d = a.kind === 'percent' ? sub * a.value / 100 : Math.min(a.value, sub); return Math.max(0, Math.min(Math.round(d * 100) / 100, sub)); }
+  function checkCode(raw) {
+    var HO = root.HubOffers, code = HO ? HO.cleanCode(raw) : '';
+    if (code.length !== 8) return Promise.resolve({ msg: 'A code has 8 letters and numbers, like K7Q2-9MXD.' });
+    return DB.getRedemption(code).then(function (r) {
+      if (!r) return { msg: 'This code was not found. Check it and try again.' };
+      if (r.status === 'redeemed') return { msg: 'This code was already used.' };
+      if (Date.now() >= HO.weekEnd(r.week).getTime()) return { msg: 'This code has expired. Saved deals end on Wednesday.' };
+      var o = HO.offerOf(r.offerId); if (!o) return { msg: 'This offer is no longer available.' };
+      if (o.kind !== 'percent' && o.kind !== 'flat') return { msg: 'This deal is used at the shop. Show the code there.' };
+      var v = H().vendor(o.vendorId) || {};
+      if (!vendorSub(o.vendorId)) return { msg: 'Add an item from ' + (v.name || 'that shop') + ' to your cart to use this code.' };
+      return { a: { code: code, vendorId: o.vendorId, offerId: o.id, title: o.title, kind: o.kind, value: o.value } };
+    }).catch(function () { return { msg: 'Could not check the code. Check your connection and try again.' }; });
+  }
+  function codeBox() {
+    if (!root.HubOffers || DB.mode === 'off') return '';
+    if (applied) { var sub = vendorSub(applied.vendorId); return '<div class="box" id="cdbox"><b>Offer applied</b><div>' + esc(applied.title) + ' · −' + money(discountFor(applied, sub)) + '</div><button class="btn ghost sm" type="button" data-unapply="1">Remove code</button></div>'; }
+    return '<div class="box" id="cdbox"><b>Have an offer code?</b><div class="muted">Saved a deal from the Offers page? Enter its code to take the discount.</div><div class="mr"><input id="bcode" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" aria-label="Offer code" style="flex:1;min-width:120px"><button class="btn sm" type="button" data-apply="1">Apply</button></div><div id="cdmsg"></div></div>';
+  }
+
   function drawCart(el, errNote) {
     var d = D(), ls = lines(), saved = lsGet('hub_buyer', {});
     if (!ls.length) {
@@ -58,10 +82,10 @@
         var t = l.p.price * l.q; sub += t;
         return '<div class="cl"><div class="cb"><b>' + esc(l.p.name) + '</b><div class="muted">' + money(l.p.price) + ' each</div><div class="qty"><button type="button" data-q="-1" data-id="' + esc(l.p.id) + '" aria-label="One less">−</button><span>' + l.q + '</span><button type="button" data-q="1" data-id="' + esc(l.p.id) + '" aria-label="One more">+</button><button type="button" class="lnk" data-rm="' + esc(l.p.id) + '">Remove</button></div></div><div class="ct">' + money(t) + '</div></div>';
       }).join('');
-      grand += sub;
-      return '<div class="box"><b>' + esc(v.name || 'Vendor') + '</b> ' + (v.verified ? '<span class="tag v">Verified</span>' : '') + '<div class="muted">' + esc(v.city || '') + (v.delivery ? ' · Delivery: ' + esc(v.delivery) : '') + '</div>' + rows + '<div class="cl tot"><div class="cb"><b>Items from this vendor</b></div><div class="ct">' + money(sub) + '</div></div></div>';
+      var disc = applied && applied.vendorId === vid ? discountFor(applied, sub) : 0; grand += sub - disc;
+      return '<div class="box"><b>' + esc(v.name || 'Vendor') + '</b> ' + (v.verified ? '<span class="tag v">Verified</span>' : '') + '<div class="muted">' + esc(v.city || '') + (v.delivery ? ' · Delivery: ' + esc(v.delivery) : '') + '</div>' + rows + '<div class="cl tot"><div class="cb"><b>Items from this vendor</b></div><div class="ct">' + money(sub) + '</div></div>' + (disc ? '<div class="cl"><div class="cb">Offer discount</div><div class="ct">−' + money(disc) + '</div></div><div class="cl tot"><div class="cb"><b>To pay this vendor</b></div><div class="ct">' + money(sub - disc) + '</div></div>' : '') + '</div>';
     }).join('') +
-      '<div class="box"><b>Total of items: ' + money(grand) + '</b><div class="muted">Delivery charges, if any, are agreed with each vendor. You pay the vendor directly (UPI, cash on delivery or as they tell you) after they confirm.</div></div>' +
+      codeBox() + '<div class="box"><b>' + (applied ? 'Total after discount: ' : 'Total of items: ') + money(grand) + '</b><div class="muted">Delivery charges, if any, are agreed with each vendor. You pay the vendor directly (UPI, cash on delivery or as they tell you) after they confirm.</div></div>' +
       '<form class="box" id="cof" novalidate><b>Your details</b>' +
       '<label class="fld">Your name<input id="bn" maxlength="80" autocomplete="name" value="' + esc(saved.name || '') + '" required></label>' +
       '<label class="fld">Phone or WhatsApp<input id="bp" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="With country code, e.g. 919876543210" value="' + esc(saved.phone || '') + '" required></label>' +
@@ -73,13 +97,20 @@
     el.innerHTML = html;
     if (el._bound) return; el._bound = true;
     el.addEventListener('click', function (e) {
+      var ab = e.target.closest && e.target.closest('[data-apply],[data-unapply]');
+      if (ab) {
+        if (ab.hasAttribute('data-unapply')) { applied = null; keep(el, function () { drawCart(el); }); return; }
+        var inp = document.getElementById('bcode'), msgBox = document.getElementById('cdmsg'); ab.disabled = true;
+        checkCode(inp ? inp.value : '').then(function (r) { if (r.a) { applied = r.a; keep(el, function () { drawCart(el); }); } else { ab.disabled = false; if (msgBox) msgBox.innerHTML = note(r.msg); } });
+        return;
+      }
       var b = e.target.closest && e.target.closest('[data-q],[data-rm]'); if (!b) return;
       if (b.hasAttribute('data-rm')) Cart.remove(b.getAttribute('data-rm')); else Cart.setQ(b.getAttribute('data-id'), parseInt(b.getAttribute('data-q'), 10));
       keep(el, function () { drawCart(el); });
     });
     el.addEventListener('submit', function (e) { e.preventDefault(); placeOrder(el); });
   }
-  function keep(el, f) { var v = {}; ['bn', 'bp', 'ba', 'bt'].forEach(function (id) { var x = document.getElementById(id); if (x) v[id] = x.value; }); f(); Object.keys(v).forEach(function (id) { var x = document.getElementById(id); if (x) x.value = v[id]; }); }
+  function keep(el, f) { var v = {}; ['bn', 'bp', 'ba', 'bt', 'bcode'].forEach(function (id) { var x = document.getElementById(id); if (x) v[id] = x.value; }); f(); Object.keys(v).forEach(function (id) { var x = document.getElementById(id); if (x) x.value = v[id]; }); }
 
   function placeOrder(el) {
     var g = function (id) { return ((document.getElementById(id) || {}).value || '').trim(); };
@@ -100,7 +131,13 @@
       return { vendorId: vid, vendorName: String(v.name || '').slice(0, 80), buyerName: name, buyerPhone: phone, buyerAddress: addr, note: g('bt'), items: items, total: items.reduce(function (n, i) { return n + i.price * i.qty; }, 0) };
     });
     var btn = document.getElementById('bgo'); btn.disabled = true; btn.textContent = 'Sending…';
-    DB.createOrders(docs).then(function (ids) {
+    (applied ? checkCode(applied.code) : Promise.resolve({})).then(function (r) {
+      if (applied && !r.a) { var why = r.msg; applied = null; btn.disabled = false; btn.textContent = 'Send order request'; keep(el, function () { drawCart(el, note('Your offer code could not be used: ' + why + ' It was removed, so please check the total and send again.')); }); return null; }
+      if (applied) docs.forEach(function (dd) { if (dd.vendorId === applied.vendorId) { dd.code = applied.code; dd.discount = discountFor(applied, dd.total); } });
+      return DB.createOrders(docs);
+    }).then(function (ids) {
+      if (!ids) return;
+      applied = null;
       lsSet('hub_last_order', Date.now()); lsSet('hub_buyer', { name: name, phone: phone, address: addr });
       var old = lsGet('hub_orders', []); ids.forEach(function (id, i) { old.unshift({ id: id, v: docs[i].vendorName, t: docs[i].total, at: Date.now() }); });
       lsSet('hub_orders', old.slice(0, 50)); Cart.clear(); location.hash = '#/order/' + ids.join(',');
@@ -114,11 +151,12 @@
   var STATUS = { new: ['Sent to the vendor', 'Waiting for the vendor to confirm.'], confirmed: ['Confirmed', 'The vendor has confirmed. Agree payment and delivery with them.'], shipped: ['On the way or ready', 'The vendor has shipped it or it is ready for pickup.'], delivered: ['Delivered', 'The vendor marked this order as delivered.'], cancelled: ['Cancelled', 'This order was cancelled.'] };
   function orderCard(o) {
     var v = H().vendor(o.vendorId) || {}, wa = digits(v.whatsapp), st = STATUS[o.status] || STATUS.new;
-    var msg = 'Hi, I placed order ' + o.id + ' on ' + D().platform.name + ':\n' + (o.items || []).map(function (i) { return '- ' + i.qty + ' x ' + i.name; }).join('\n') + '\nTotal of items: ' + money(o.total) + '\nName: ' + o.buyerName + '\nAddress: ' + o.buyerAddress;
+    var msg = 'Hi, I placed order ' + o.id + ' on ' + D().platform.name + ':\n' + (o.items || []).map(function (i) { return '- ' + i.qty + ' x ' + i.name; }).join('\n') + '\nTotal of items: ' + money(o.total) + (o.code ? '\nOffer code ' + o.code + ': -' + money(o.discount) + '\nTo pay: ' + money(Math.max(0, o.total - o.discount)) : '') + '\nName: ' + o.buyerName + '\nAddress: ' + o.buyerAddress;
     return '<div class="box"><div><span class="tag' + (o.status === 'delivered' || o.status === 'confirmed' ? ' v' : '') + '">' + esc(st[0]) + '</span></div><b>' + esc(o.vendorName || v.name || 'Vendor') + '</b>' +
       '<div class="muted">' + esc(st[1]) + '</div>' +
       (o.items || []).map(function (i) { return '<div class="cl"><div class="cb">' + esc(i.qty) + ' × ' + esc(i.name) + '</div><div class="ct">' + money(i.price * i.qty) + '</div></div>'; }).join('') +
       '<div class="cl tot"><div class="cb"><b>Total of items</b></div><div class="ct">' + money(o.total) + '</div></div>' +
+      (o.code ? '<div class="cl"><div class="cb">Offer code ' + esc(String(o.code).slice(0, 4) + '-' + String(o.code).slice(4)) + '</div><div class="ct">−' + money(o.discount) + '</div></div><div class="cl tot"><div class="cb"><b>To pay the vendor</b></div><div class="ct">' + money(Math.max(0, o.total - o.discount)) + '</div></div><div class="muted">The vendor spends the code when they confirm. If it was already used elsewhere, the vendor will tell you.</div>' : '') +
       (o.vendorNote ? '<div class="box"><b>Message from the vendor</b><div>' + esc(o.vendorNote) + '</div></div>' : '') +
       '<div class="muted">Order ID <b>' + esc(o.id) + '</b>' + (o.createdAt ? ' · ' + esc(when(o.createdAt)) : '') + '</div>' +
       (wa && o.status !== 'cancelled' ? '<a class="btn full" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '?text=' + encodeURIComponent(msg) + '">Send this order on WhatsApp</a>' : '') +
