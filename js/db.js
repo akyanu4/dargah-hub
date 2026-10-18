@@ -13,7 +13,7 @@
   function mockStore() { try { return JSON.parse(localStorage.getItem('hub_mock') || '{}'); } catch (e) { return {}; } }
   function mockSave(s) { try { localStorage.setItem('hub_mock', JSON.stringify(s)); } catch (e) {} }
   function mockImpl() {
-    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.dargahs = s.dargahs || {}; s.claims = s.claims || {}; s.user = s.user || null;
+    var s = mockStore(); s.vendors = s.vendors || {}; s.products = s.products || {}; s.orders = s.orders || {}; s.leads = s.leads || {}; s.reports = s.reports || {}; s.dargahs = s.dargahs || {}; s.claims = s.claims || {}; s.offers = s.offers || {}; s.user = s.user || null;
     function save() { mockSave(s); }
     api.user = s.user; var im = {};
     im.signIn = function (email) { s.user = { uid: 'u_' + email.replace(/\W/g, ''), email: email }; api.user = s.user; save(); emit(); return Promise.resolve(); };
@@ -27,7 +27,7 @@
     im.myProducts = function () { return Promise.resolve(Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return p.vendorId === s.user.uid; })); };
     im.saveProduct = function (d) { var id = d.id || 'm' + Date.now(); s.products[id] = Object.assign({}, s.products[id] || {}, d, { id: id, vendorId: s.user.uid }); save(); return Promise.resolve(id); };
     im.deleteProduct = function (id) { delete s.products[id]; save(); return Promise.resolve(); };
-    im.live = function () { var vs = Object.keys(s.vendors).map(function (k) { return s.vendors[k]; }).filter(function (v) { return v.status === 'approved'; }); var ok = {}; vs.forEach(function (v) { ok[v.id] = 1; }); return Promise.resolve({ vendors: vs, products: Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }), dargahs: Object.keys(s.dargahs).map(function (k) { return s.dargahs[k]; }).filter(function (g) { return !g.hidden; }) }); };
+    im.live = function () { var vs = Object.keys(s.vendors).map(function (k) { return s.vendors[k]; }).filter(function (v) { return v.status === 'approved'; }); var ok = {}; vs.forEach(function (v) { ok[v.id] = 1; }); return Promise.resolve({ vendors: vs, products: Object.keys(s.products).map(function (k) { return s.products[k]; }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }), dargahs: Object.keys(s.dargahs).map(function (k) { return s.dargahs[k]; }).filter(function (g) { return !g.hidden; }), offers: Object.keys(s.offers).map(function (k) { return s.offers[k]; }).filter(function (o) { return o.status === 'approved' && ok[o.vendorId]; }) }); };
     im.adminVendors = function () { return Promise.resolve(Object.keys(s.vendors).map(function (k) { return s.vendors[k]; })); };
     im.adminSetStatus = function (uid, st) { s.vendors[uid].status = st; save(); return Promise.resolve(); };
     function list(o) { return Object.keys(o).map(function (k) { return o[k]; }); }
@@ -36,6 +36,14 @@
     im.getOrder = function (id) { return Promise.resolve(s.orders[id] || null); };
     im.vendorOrders = function () { return Promise.resolve(list(s.orders).filter(function (o) { return o.vendorId === s.user.uid; })); };
     im.setOrderStatus = function (id, st, note) { s.orders[id].status = st; if (note != null) s.orders[id].vendorNote = note; save(); return Promise.resolve(); };
+    function weekOf() { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate() - ((t.getDay() + 3) % 7), 12); function k(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); } return [k(t), k(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7, 12))]; }
+    im.idToken = function () { return Promise.resolve('mock'); };
+    im.myOffers = function () { return Promise.resolve(list(s.offers).filter(function (o) { return o.vendorId === s.user.uid; })); };
+    im.saveOffer = function (d) { var id = d.id || nid('o'), old = s.offers[id]; if (old && old.status !== 'pending') return Promise.reject(new Error('Only offers waiting for approval can be edited.')); s.offers[id] = Object.assign({}, old || {}, { title: d.title, details: d.details, discount: d.discount, week: d.week }, { id: id, vendorId: s.user.uid, status: 'pending', createdAt: old ? old.createdAt : Date.now() }); save(); return Promise.resolve(id); };
+    im.deleteOffer = function (id) { delete s.offers[id]; save(); return Promise.resolve(); };
+    im.adminOffers = function () { return Promise.resolve(list(s.offers)); };
+    im.adminSetOffer = function (id, st) { s.offers[id].status = st; save(); return Promise.resolve(); };
+    im.adminSaveOffer = function (vid, d) { var id = nid('o'); s.offers[id] = Object.assign({}, d, { id: id, vendorId: vid, status: 'approved', createdAt: Date.now() }); save(); return Promise.resolve(id); };
     im.createLead = function (o) { var id = nid('l'); s.leads[id] = Object.assign({}, o, { id: id, status: 'new', createdAt: Date.now() }); save(); return Promise.resolve(id); };
     im.createReport = function (o) { var id = nid('r'); s.reports[id] = Object.assign({}, o, { id: id, status: 'new', createdAt: Date.now() }); save(); return Promise.resolve(id); };
     im.adminLeads = function () { return Promise.resolve(list(s.leads)); };
@@ -90,9 +98,9 @@
     im.deleteProduct = function (id) { return boot().then(function (x) { return x.fs.deleteDoc(x.fs.doc(db, 'products', id)); }); };
     im.live = function () {
       return boot().then(function (x) {
-        return Promise.all([x.fs.getDocs(x.fs.query(x.fs.collection(db, 'vendors'), x.fs.where('status', '==', 'approved'))), x.fs.getDocs(x.fs.collection(db, 'products')), x.fs.getDocs(x.fs.query(x.fs.collection(db, 'dargahs'), x.fs.where('hidden', '==', false))).catch(function () { return { docs: [] }; })]).then(function (r) {
+        return Promise.all([x.fs.getDocs(x.fs.query(x.fs.collection(db, 'vendors'), x.fs.where('status', '==', 'approved'))), x.fs.getDocs(x.fs.collection(db, 'products')), x.fs.getDocs(x.fs.query(x.fs.collection(db, 'dargahs'), x.fs.where('hidden', '==', false))).catch(function () { return { docs: [] }; }), x.fs.getDocs(x.fs.query(x.fs.collection(db, 'offers'), x.fs.where('status', '==', 'approved'), x.fs.where('week', 'in', weekOf()))).catch(function () { return { docs: [] }; })]).then(function (r) {
           var vs = r[0].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }), ok = {}; vs.forEach(function (v) { ok[v.id] = 1; });
-          return { vendors: vs, products: r[1].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }), dargahs: r[2].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }) };
+          return { vendors: vs, products: r[1].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).filter(function (p) { return ok[p.vendorId] && !p.hidden; }), dargahs: r[2].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }), offers: r[3].docs.map(function (d) { return Object.assign({ id: d.id }, d.data()); }).filter(function (o) { return ok[o.vendorId]; }) };
         });
       });
     };
@@ -104,6 +112,14 @@
     im.getOrder = function (id) { return boot().then(function (x) { return x.fs.getDoc(x.fs.doc(db, 'orders', id)).then(function (d) { return d.exists() ? ord(d) : null; }); }); };
     im.vendorOrders = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'orders'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(ord); }); }); };
     im.setOrderStatus = function (id, st, note) { return boot().then(function (x) { var u = { status: st, updatedAt: x.fs.serverTimestamp() }; if (note != null) u.vendorNote = note; return x.fs.updateDoc(x.fs.doc(db, 'orders', id), u); }); };
+    function weekOf() { var t = new Date(); t = new Date(t.getFullYear(), t.getMonth(), t.getDate() - ((t.getDay() + 3) % 7), 12); function k(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); } return [k(t), k(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 7, 12))]; }
+    im.idToken = function () { return boot().then(function () { return auth.currentUser ? auth.currentUser.getIdToken() : Promise.reject(new Error('Please sign in again.')); }); };
+    im.myOffers = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.query(x.fs.collection(db, 'offers'), x.fs.where('vendorId', '==', auth.currentUser.uid))).then(function (q) { return q.docs.map(ord); }); }); };
+    im.saveOffer = function (d) { return boot().then(function (x) { var f = { title: d.title, details: d.details, discount: d.discount, week: d.week }; if (d.id) return x.fs.updateDoc(x.fs.doc(db, 'offers', d.id), f).then(function () { return d.id; }); return x.fs.addDoc(x.fs.collection(db, 'offers'), Object.assign(f, { vendorId: auth.currentUser.uid, status: 'pending', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
+    im.deleteOffer = function (id) { return boot().then(function (x) { return x.fs.deleteDoc(x.fs.doc(db, 'offers', id)); }); };
+    im.adminOffers = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'offers')).then(function (q) { return q.docs.map(ord); }); }); };
+    im.adminSetOffer = function (id, st) { return boot().then(function (x) { return x.fs.updateDoc(x.fs.doc(db, 'offers', id), { status: st }); }); };
+    im.adminSaveOffer = function (vid, d) { return boot().then(function (x) { return x.fs.addDoc(x.fs.collection(db, 'offers'), Object.assign({}, d, { vendorId: vid, status: 'approved', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
     im.createLead = function (o) { return boot().then(function (x) { return x.fs.addDoc(x.fs.collection(db, 'leads'), Object.assign({}, o, { status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
     im.createReport = function (o) { return boot().then(function (x) { return x.fs.addDoc(x.fs.collection(db, 'reports'), Object.assign({}, o, { status: 'new', createdAt: x.fs.serverTimestamp() })).then(function (r) { return r.id; }); }); };
     im.adminLeads = function () { return boot().then(function (x) { return x.fs.getDocs(x.fs.collection(db, 'leads')).then(function (q) { return q.docs.map(ord); }); }); };
@@ -160,7 +176,7 @@
   }
 
   var impl = api.mode === 'firebase' ? fbImpl() : api.mode === 'mock' ? mockImpl() : null;
-  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah'].forEach(function (k) {
+  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah', 'idToken', 'myOffers', 'saveOffer', 'deleteOffer', 'adminOffers', 'adminSetOffer', 'adminSaveOffer'].forEach(function (k) {
     api[k] = function () { return impl && impl[k] ? impl[k].apply(null, arguments) : Promise.reject(new Error('Vendor accounts are not switched on yet.')); };
   });
   if (impl && impl.init) impl.init().catch(function () {});

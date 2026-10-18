@@ -124,3 +124,5 @@ table.pv2{font-size:13px}table.pv2 td,table.pv2 th{padding:6px 8px}
 
 .ev{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit}.evd{flex:none;width:54px;text-align:center;border-radius:12px;background:var(--night);color:#fff;padding:6px 0}.evd b{display:block;font-size:20px;line-height:1.1}.evd span{font-size:12px;text-transform:uppercase;letter-spacing:.04em}.nx{margin-top:4px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.two .btn{width:100%}
+
+.offer .otop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.offer .otop b{font-size:16px}.offer .mr,.mr{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}

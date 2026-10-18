@@ -47,7 +47,7 @@
 
   var R = {
     home: function () {
-      return nextCard() + '<div class="trow">' + TOOLS.slice(0, 6).map(toolTile).join('') + '</div>' + ads('home') + (window.HubEngage ? HubEngage.homeBlock() : '') +
+      return nextCard() + '<div class="trow">' + TOOLS.slice(0, 6).map(toolTile).join('') + '</div>' + ads('home') + (window.HubOffers ? HubOffers.homeBlock() : '') + (window.HubEngage ? HubEngage.homeBlock() : '') +
         '<div class="sech"><h2>Dargahs</h2><a href="#/dargahs">See all</a></div><div class="dgl">' + D.dargahs.slice(0, 3).map(dcard).join('') + '</div>' +
         '<div class="sech"><h2>In the shop</h2><a href="#/shop">See all</a></div><div class="hscroll">' + D.products.map(function (p, i) { return card(p, i); }).join('') + '</div>' +
         '<h2>Join in</h2><div class="who"><a class="tile" href="#/join"><b>Keep a dargah?</b><span>Get a page for your events, photos and videos. Free to start.</span><u>List your dargah</u></a><a class="tile" href="#/sell"><b>Sell something?</b><span>List your shop here, or create one with your items and photos.</span><u>Sell on the hub</u></a></div>';
@@ -55,7 +55,7 @@
     dargahs: function () { return '<div class="dgl">' + D.dargahs.map(dcard).join('') + '</div><p class="muted">Are you a keeper? <a href="#/join"><b>List your dargah</b></a>.</p>'; },
     tools: function () { return '<div class="tgrid">' + TOOLS.map(toolTile).join('') + '</div>'; },
     more: function () {
-      return '<div class="list"><a href="#/upcoming"><span>Upcoming Urs and events</span><i>›</i></a><a href="#/following"><span>Following</span><i>›</i></a><a href="#/saved"><span>Saved items</span><i>›</i></a><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/mydargah"><span>Keeper: edit my dargah page</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
+      return '<div class="list"><a href="#/offers"><span>Weekly offers</span><i>›</i></a><a href="#/upcoming"><span>Upcoming Urs and events</span><i>›</i></a><a href="#/following"><span>Following</span><i>›</i></a><a href="#/saved"><span>Saved items</span><i>›</i></a><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/mydargah"><span>Keeper: edit my dargah page</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
         '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
     },
     dargah: function (id) {
@@ -95,7 +95,7 @@
       var known = D.categories.map(function (c) { return c.id; }), cats = D.categories.filter(function (c) { return D.products.some(function (p) { return p.cat === c.id; }); });
       D.products.forEach(function (p) { if (p.cat && known.indexOf(p.cat) < 0 && !cats.some(function (c) { return c.id === p.cat; })) cats.push({ id: p.cat, name: catName(p.cat) }); });
       var list = D.products.filter(function (p) { return !cat || p.cat === cat; });
-      return '<h1>The shop</h1><p class="muted">Independent vendors sell here, from attar and books to food, clothing and gifts. ' + esc(D.platform.name) + ' does not take payment or deliver: you send an order request and pay the vendor directly.</p><input class="search" id="q" type="search" placeholder="Search products and vendors" aria-label="Search the shop">' + ads('shop') +
+      return '<h1>The shop</h1><p class="muted">Independent vendors sell here, from attar and books to food, clothing and gifts. ' + esc(D.platform.name) + ' does not take payment or deliver: you send an order request and pay the vendor directly.</p><input class="search" id="q" type="search" placeholder="Search products and vendors" aria-label="Search the shop"><a class="btn ghost full" href="#/offers">This week\'s offers (Thursday to Thursday)</a>' + ads('shop') +
         '<div class="chips"><a class="chip' + (!cat ? ' on' : '') + '" href="#/shop">All</a>' + cats.map(function (c) { return '<a class="chip' + (cat === c.id ? ' on' : '') + '" href="#/shop/' + esc(c.id) + '">' + esc(c.name) + '</a>'; }).join('') + '</div>' +
         '<div id="plist">' + shopGrid(list) + '</div><h2>Vendors</h2><div class="list">' + D.vendors.map(function (v) { return '<a href="#/v/' + esc(v.id) + '"><span>' + esc(v.name) + '<br><small class="muted">' + esc(v.city) + '</small></span><i>›</i></a>'; }).join('') + '</div><p class="muted">Sell something different? <a href="#/sell"><b>Sell on the hub</b></a>. Any kind of halal product or service is welcome.</p>';
     },
@@ -117,7 +117,7 @@
     },
     vendor: function (id) {
       var v = vendor(id); if (!v) return nf();
-      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + (window.HubEngage ? '<div class="two">' + HubEngage.followBtn('v', v.id, 'btn ghost') + '<button class="btn ghost" type="button" id="shr" data-t="' + esc(v.name) + '" data-x="' + esc(v.name + ' on ' + D.platform.name + ':') + '">Share</button></div>' : '') + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a>' + (String(v.id).indexOf('imp-') === 0 ? ' · Listed by Dargah Hub. <a href="#/claim/v/' + esc(v.id) + '"><b>Is this your shop? Claim it</b></a>' : '') + '</p>' : '');
+      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + (v.address ? '<div class="box"><b>Visit the shop</b><div class="muted">' + esc(v.address) + '</div>' + (window.HubOffers ? HubOffers.visitRow(v) : '') + '</div>' : '') + (window.HubOffers ? HubOffers.vendorBlock(v.id) : '') + (window.HubEngage ? '<div class="two">' + HubEngage.followBtn('v', v.id, 'btn ghost') + '<button class="btn ghost" type="button" id="shr" data-t="' + esc(v.name) + '" data-x="' + esc(v.name + ' on ' + D.platform.name + ':') + '">Share</button></div>' : '') + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a>' + (String(v.id).indexOf('imp-') === 0 ? ' · Listed by Dargah Hub. <a href="#/claim/v/' + esc(v.id) + '"><b>Is this your shop? Claim it</b></a>' : '') + '</p>' : '');
     },
     join: function () {
       var mail = 'mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=';
@@ -137,13 +137,13 @@
   var STATIC = null, liveAt = 0;
   function merge(live) {
     if (!STATIC) STATIC = { d: D.dargahs.slice(), v: D.vendors.slice(), p: D.products.slice(), c: D.categories.map(function (c) { return { id: c.id, name: c.name }; }) };
-    D.dargahs = STATIC.d.slice(); D.vendors = STATIC.v.slice(); D.products = STATIC.p.slice(); D.categories = STATIC.c.map(function (c) { return { id: c.id, name: c.name }; }); liveAt = Date.now();
+    D.offers = (live.offers || []).slice(); D.dargahs = STATIC.d.slice(); D.vendors = STATIC.v.slice(); D.products = STATIC.p.slice(); D.categories = STATIC.c.map(function (c) { return { id: c.id, name: c.name }; }); liveAt = Date.now();
     function paras(t) { return String(t || '').split(/\n{2,}|\s\|\|\s/).map(function (x) { return x.trim(); }).filter(Boolean); }
     (live.dargahs || []).forEach(function (g) {
       if (D.dargahs.some(function (x) { return x.id === g.id; })) return;
       D.dargahs.push({ id: g.id, name: g.name, short: g.name, city: g.city || '', tagline: g.tagline || '', about: Array.isArray(g.about) ? g.about : paras(g.about), address: g.address || '', phone: g.phone || '', whatsapp: g.whatsapp || '', email: g.email || '', website: g.website || '', map: g.map || '', lat: typeof g.lat === 'number' ? g.lat : undefined, lon: typeof g.lon === 'number' ? g.lon : undefined, timings: g.timings || [], events: g.events || [], gallery: g.gallery || [], videos: g.videos || [], updated: g.lastVerified || '', verified: !!g.verified, confirmed: !!g.confirmed, source: g.source || '', live: true });
     });
-    live.vendors.forEach(function (v) { if (D.vendors.some(function (x) { return x.id === v.id; })) return; D.vendors.push({ id: v.id, name: v.name, city: v.city, about: v.about, type: v.type, shopUrl: v.shopUrl, whatsapp: v.whatsapp, phone: v.phone, verified: !!v.verified, delivery: v.delivery || '', contactEmail: v.contactEmail || '', live: true }); });
+    live.vendors.forEach(function (v) { if (D.vendors.some(function (x) { return x.id === v.id; })) return; D.vendors.push({ id: v.id, name: v.name, city: v.city, address: v.address || '', map: v.map || '', about: v.about, type: v.type, shopUrl: v.shopUrl, whatsapp: v.whatsapp, phone: v.phone, verified: !!v.verified, delivery: v.delivery || '', contactEmail: v.contactEmail || '', live: true }); });
     live.products.forEach(function (p) {
       var v = vendor(p.vendorId), c = slug(p.cat); if (!v) return;
       if (!D.categories.some(function (x) { return x.id === c; })) D.categories.push({ id: c, name: String(p.cat).trim() });
@@ -161,7 +161,7 @@
   function nf() { return '<h2>Not found</h2><p><a href="#/">Go home</a></p>'; }
 
   var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise', cart: 'Cart' };
-  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', upcoming: 'dargahs', following: 'more', saved: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more', claim: 'more', mydargah: 'more' };
+  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', offers: 'shop', myoffers: 'more', adminoffers: 'more', upcoming: 'dargahs', following: 'more', saved: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more', claim: 'more', mydargah: 'more' };
   var timer = null;
   document.addEventListener('input', function (e) {
     if (!e.target || e.target.id !== 'q') return; var q = e.target.value.trim().toLowerCase(), box = document.getElementById('plist'); if (!box) return;
@@ -176,7 +176,7 @@
   });
   function route() {
     var rr = (location.hash || '#/').replace(/^#\/?/, '').split('/')[0];
-    if (window.HubDB && HubDB.mode !== 'off' && STATIC && Date.now() - liveAt > 15000 && ['', 'shop', 'p', 'v', 'sell', 'cart', 'order', 'orders'].indexOf(rr) >= 0 && !route.busy) { route.busy = true; HubDB.live().then(merge).catch(function () {}).then(function () { route.busy = false; liveAt = Date.now(); route(); }); return; }
+    if (window.HubDB && HubDB.mode !== 'off' && STATIC && Date.now() - liveAt > 15000 && ['', 'shop', 'p', 'v', 'sell', 'cart', 'order', 'orders', 'offers', 'myoffers'].indexOf(rr) >= 0 && !route.busy) { route.busy = true; HubDB.live().then(merge).catch(function () {}).then(function () { route.busy = false; liveAt = Date.now(); route(); }); return; }
     var h = (location.hash || '#/').replace(/^#\/?/, '').split('/'), r = h[0] || 'home', html, title, bind = null, view = document.createElement('div');
     clearInterval(timer);
     var HS = window.HubScreens || {};
@@ -197,7 +197,7 @@
   }
   document.getElementById('back').addEventListener('click', function () { if (history.length > 1) history.back(); else location.hash = '#/'; });
   Promise.all([get('data/platform.json'), get('data/dargahs/index.json'), get('data/vendors.json'), get('data/products.json'), get('data/ads.json'), get('data/categories.json')]).then(function (r) {
-    D.platform = r[0]; D.vendors = r[2]; D.products = r[3]; D.ads = r[4]; D.categories = r[5];
+    D.platform = r[0]; D.offers = []; D.vendors = r[2]; D.products = r[3]; D.ads = r[4]; D.categories = r[5];
     return Promise.all(r[1].map(function (id) { return get('data/dargahs/' + id + '.json'); }));
   }).then(function (ds) {
     D.dargahs = ds; document.title = D.platform.name;

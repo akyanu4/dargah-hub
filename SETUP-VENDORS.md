@@ -60,3 +60,13 @@ In `js/config.js` set `mock: true`. Data then stays in the browser only. Sign in
 ## Limits to know
 - Each item photo is capped at about 100 KB. That is fine for hundreds of items. For thousands, move photos to Firebase Storage (needs the pay-as-you-go plan).
 - Firebase free plan limits apply (about 50,000 reads a day). Add caching or paging if the site gets busy.
+
+## Weekly offers and alerts
+
+Offers run Thursday to the next Thursday. Vendors post them at `#/myoffers` (Sell on the hub, then Weekly offers). You approve them at `#/adminoffers`, which also has the "Send alert" button. Publish the latest `firestore.rules` first (it adds the `offers` collection and the vendor `address` and `map` fields).
+
+### Turn on the phone alerts (OneSignal, free)
+1. Create a new OneSignal app for Dargah Hub (do not reuse the Noor app). Choose Web Push, site URL `https://dargah-hub.vercel.app`, and under advanced settings use the service worker path `push/onesignal/OneSignalSDKWorker.js` with scope `/push/onesignal/`.
+2. Put the public App ID in `js/config.js` as `onesignalAppId`. This makes the "Turn on offer alerts" button appear on the Offers page.
+3. In Vercel, Project Settings, Environment Variables, add `ONESIGNAL_APP_ID` and `ONESIGNAL_API_KEY` (the REST API key). Never put the REST key in the code or in a chat. Redeploy.
+4. Sign in as admin, open `#/adminoffers`, approve this week's offers, and press Send alert. Only your admin sign-in can send.
