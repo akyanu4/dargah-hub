@@ -47,7 +47,7 @@
 
   var R = {
     home: function () {
-      return nextCard() + '<div class="trow">' + TOOLS.slice(0, 6).map(toolTile).join('') + '</div>' + ads('home') +
+      return nextCard() + '<div class="trow">' + TOOLS.slice(0, 6).map(toolTile).join('') + '</div>' + ads('home') + (window.HubEngage ? HubEngage.homeBlock() : '') +
         '<div class="sech"><h2>Dargahs</h2><a href="#/dargahs">See all</a></div><div class="dgl">' + D.dargahs.slice(0, 3).map(dcard).join('') + '</div>' +
         '<div class="sech"><h2>In the shop</h2><a href="#/shop">See all</a></div><div class="hscroll">' + D.products.map(function (p, i) { return card(p, i); }).join('') + '</div>' +
         '<h2>Join in</h2><div class="who"><a class="tile" href="#/join"><b>Keep a dargah?</b><span>Get a page for your events, photos and videos. Free to start.</span><u>List your dargah</u></a><a class="tile" href="#/sell"><b>Sell something?</b><span>List your shop here, or create one with your items and photos.</span><u>Sell on the hub</u></a></div>';
@@ -55,7 +55,7 @@
     dargahs: function () { return '<div class="dgl">' + D.dargahs.map(dcard).join('') + '</div><p class="muted">Are you a keeper? <a href="#/join"><b>List your dargah</b></a>.</p>'; },
     tools: function () { return '<div class="tgrid">' + TOOLS.map(toolTile).join('') + '</div>'; },
     more: function () {
-      return '<div class="list"><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/mydargah"><span>Keeper: edit my dargah page</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
+      return '<div class="list"><a href="#/upcoming"><span>Upcoming Urs and events</span><i>›</i></a><a href="#/following"><span>Following</span><i>›</i></a><a href="#/saved"><span>Saved items</span><i>›</i></a><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/mydargah"><span>Keeper: edit my dargah page</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
         '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
     },
     dargah: function (id) {
@@ -68,7 +68,8 @@
       if (wa) acts += '<a class="act" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '"><i>💬</i>WhatsApp</a>';
       if (hasGeo) acts += '<a class="act" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=' + d.lat + ',' + d.lon + '"><i>🧭</i>Directions</a>';
       else if (m) acts += '<a class="act" target="_blank" rel="noopener" href="' + esc(m) + '"><i>🧭</i>Map</a>';
-      acts += '<button class="act" type="button" id="shr" data-t="' + esc(d.name) + '"><i>↗</i>Share</button>';
+      if (window.HubEngage) acts += HubEngage.followBtn('d', d.id);
+      acts += '<button class="act" type="button" id="shr" data-t="' + esc(d.name) + '" data-x="' + esc(window.HubEngage ? HubEngage.dargahShare(d) : d.name) + '"><i>↗</i>Share</button>';
       var info = '';
       if (d.address) info += '<div class="irow"><span>Address</span><div>' + esc(d.address) + '</div></div>';
       (d.timings || []).forEach(function (t) { info += '<div class="irow"><span>' + esc(t.label) + '</span><div>' + esc(t.time) + '</div></div>'; });
@@ -84,7 +85,7 @@
         (info ? '<h2>Visit and contact</h2><div class="box facts">' + info + '</div>' : '<div class="box muted">Contact details have not been added yet. The keeper can send them through <a href="#/join"><b>Join</b></a>.</div>') +
         (hasGeo ? '<div class="box mapbox" id="mapbox"><button class="btn ghost full" type="button" id="showmap" data-lat="' + d.lat + '" data-lon="' + d.lon + '">Show the map here</button><div class="muted">Loading the map shares your IP address with Google.</div></div>' : '') +
         (m ? '<a class="btn ghost full" target="_blank" rel="noopener" href="' + esc(m) + '">Open in Google Maps</a>' : '') +
-        (d.events && d.events.length ? '<h2>Events</h2>' + d.events.map(function (e) { return '<div class="box"><b>' + esc(e.title) + '</b><div class="muted">' + esc(e.when) + (e.note ? '. ' + esc(e.note) : '') + '</div></div>'; }).join('') : '') +
+        (d.events && d.events.length ? '<h2>Events</h2>' + d.events.map(function (e) { return '<div class="box"><b>' + esc(e.title) + '</b><div class="muted">' + esc(e.when) + (e.note ? '. ' + esc(e.note) : '') + '</div>' + (window.HubEngage ? HubEngage.eventNote(e) : '') + '</div>'; }).join('') : '') +
         (photos.length ? '<h2>Photos</h2><div class="gal">' + photos.map(function (g) { return '<a class="gi" href="' + esc(g.src) + '" data-lb="' + esc(g.src) + '" data-cap="' + esc(g.caption) + '"><img loading="lazy" alt="' + esc(g.caption) + '" src="' + esc(g.src) + '"></a>'; }).join('') + '</div>' : '') +
         (d.videos && d.videos.length ? '<h2>Videos</h2>' + d.videos.filter(function (v) { return /^[A-Za-z0-9_-]{11}$/.test(v.id || ''); }).map(function (v) { return '<div class="box"><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + esc(v.id) + '">▶ ' + esc(v.title) + '</a></div>'; }).join('') : '') +
         (d.sources && d.sources.length ? '<h2>Sources</h2><div class="box muted">' + d.sources.map(function (x) { var u = safeUrl(x.url); return u ? '<div><a target="_blank" rel="noopener" href="' + esc(u) + '">' + esc(x.title) + '</a></div>' : ''; }).join('') + '</div>' : '') +
@@ -111,11 +112,12 @@
       return '<p><a href="#/shop"><b>‹ Back to the shop</b></a></p><div class="pcard"><div><div class="card">' + art(p, i0) + '</div>' + thumbs + '</div><div><h1>' + esc(p.name) + '</h1><div>' + sampleTag(p) + '</div><span class="price" style="font-size:22px;padding:3px 14px">' + money(p.price) + '</span><p>' + esc(p.desc) + '</p>' +
         (v ? '<div class="box">Sold by <a href="#/v/' + esc(v.id) + '"><b>' + esc(v.name) + '</b></a> ' + verTag(v) + '<div class="muted">' + esc(v.city) + '</div>' + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' : '') + buy +
         (wa && p.live ? '<a class="btn ghost full" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '?text=' + encodeURIComponent('Hi, I have a question about "' + p.name + '" on ' + D.platform.name + '.') + '">Ask the vendor on WhatsApp</a>' : '') +
+        (window.HubEngage ? HubEngage.saveBtn(p.id) : '') + '<button class="btn ghost full" type="button" id="shr" data-t="' + esc(p.name) + '" data-x="' + esc(p.name + ' on ' + D.platform.name + ':') + '">Share this item</button>' +
         '<p class="muted">The vendor sells and delivers. Check the product and return terms with them before you pay. <a href="#/report/p/' + esc(p.raw || p.id) + '">Report this item</a></p></div></div>';
     },
     vendor: function (id) {
       var v = vendor(id); if (!v) return nf();
-      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a>' + (String(v.id).indexOf('imp-') === 0 ? ' · Listed by Dargah Hub. <a href="#/claim/v/' + esc(v.id) + '"><b>Is this your shop? Claim it</b></a>' : '') + '</p>' : '');
+      return '<div class="hero"><h1>' + esc(v.name) + '</h1><p>' + esc(v.city) + '</p><div>' + sampleTag(v) + verTag(v) + '</div></div><div class="box">' + esc(v.about) + (v.delivery ? '<div class="muted">Delivery: ' + esc(v.delivery) + '</div>' : '') + '</div>' + vendorActs(v) + (window.HubEngage ? '<div class="two">' + HubEngage.followBtn('v', v.id, 'btn ghost') + '<button class="btn ghost" type="button" id="shr" data-t="' + esc(v.name) + '" data-x="' + esc(v.name + ' on ' + D.platform.name + ':') + '">Share</button></div>' : '') + '<h2>Products</h2><div class="grid">' + D.products.filter(function (p) { return p.vendor === id; }).map(card).join('') + '</div>' + (v.live ? '<p class="muted"><a href="#/report/v/' + esc(v.id) + '">Report this vendor</a>' + (String(v.id).indexOf('imp-') === 0 ? ' · Listed by Dargah Hub. <a href="#/claim/v/' + esc(v.id) + '"><b>Is this your shop? Claim it</b></a>' : '') + '</p>' : '');
     },
     join: function () {
       var mail = 'mailto:' + encodeURIComponent(D.platform.contact || '') + '?subject=';
@@ -159,7 +161,7 @@
   function nf() { return '<h2>Not found</h2><p><a href="#/">Go home</a></p>'; }
 
   var TITLES = { home: 'Dargah Hub', dargahs: 'Dargahs', d: 'Dargah', shop: 'Shop', p: 'Product', v: 'Vendor', tools: 'Tools', more: 'More', join: 'Join', advertise: 'Advertise', cart: 'Cart' };
-  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more', claim: 'more', mydargah: 'more' };
+  var TAB = { sell: 'more', admin: 'more', home: 'home', dargahs: 'dargahs', d: 'dargahs', shop: 'shop', p: 'shop', v: 'shop', tools: 'tools', prayer: 'tools', qibla: 'tools', tasbeeh: 'tools', duas: 'tools', calendar: 'tools', iman: 'tools', more: 'more', join: 'more', advertise: 'more', cart: 'shop', upcoming: 'dargahs', following: 'more', saved: 'shop', order: 'more', orders: 'more', report: 'more', contact: 'more', claim: 'more', mydargah: 'more' };
   var timer = null;
   document.addEventListener('input', function (e) {
     if (!e.target || e.target.id !== 'q') return; var q = e.target.value.trim().toLowerCase(), box = document.getElementById('plist'); if (!box) return;
@@ -168,7 +170,7 @@
   });
   document.addEventListener('click', function (e) {
     var t = e.target, b;
-    if ((b = t.closest && t.closest('#shr'))) { var u = location.href, tt = b.getAttribute('data-t'); if (navigator.share) navigator.share({ title: tt, url: u }).catch(function () {}); else if (navigator.clipboard) navigator.clipboard.writeText(u).then(function () { b.lastChild.textContent = 'Copied'; }); return; }
+    if ((b = t.closest && t.closest('#shr'))) { var u = location.href, tt = b.getAttribute('data-t'), tx = b.getAttribute('data-x') || tt; if (window.HubEngage) HubEngage.share(tt, tx, u); else if (navigator.share) navigator.share({ title: tt, url: u }).catch(function () {}); return; }
     if ((b = t.closest && t.closest('#showmap'))) { var la = parseFloat(b.getAttribute('data-lat')), lo = parseFloat(b.getAttribute('data-lon')); if (isFinite(la) && isFinite(lo)) b.parentNode.innerHTML = '<iframe title="Map" loading="lazy" referrerpolicy="no-referrer" src="https://www.google.com/maps?q=' + la + ',' + lo + '&z=16&output=embed" style="border:0;width:100%;height:280px;border-radius:12px"></iframe>'; return; }
     if ((b = t.closest && t.closest('[data-lb]'))) { e.preventDefault(); var o = document.createElement('div'); o.className = 'lbx'; var im = document.createElement('img'); im.src = b.getAttribute('data-lb'); im.alt = b.getAttribute('data-cap') || ''; var c = document.createElement('div'); c.textContent = b.getAttribute('data-cap') || ''; o.appendChild(im); o.appendChild(c); o.addEventListener('click', function () { o.remove(); }); document.body.appendChild(o); }
   });
@@ -199,7 +201,7 @@
     return Promise.all(r[1].map(function (id) { return get('data/dargahs/' + id + '.json'); }));
   }).then(function (ds) {
     D.dargahs = ds; document.title = D.platform.name;
-    window.HubApp = { stale: function () { liveAt = 0; }, cats: function () { return D.categories.map(function (c) { return c.name; }); }, D: function () { return D; }, esc: esc, money: money, vendor: vendor, safeUrl: safeUrl, route: route };
+    window.HubApp = { stale: function () { liveAt = 0; }, cats: function () { return D.categories.map(function (c) { return c.name; }); }, D: function () { return D; }, esc: esc, money: money, vendor: vendor, safeUrl: safeUrl, route: route, card: card, dcard: dcard };
     route(); window.addEventListener('hashchange', route);
     if (window.HubDB && HubDB.mode !== 'off') return HubDB.live().then(merge).then(function () { route(); }).catch(function () {});
   }).catch(function () { app.innerHTML = '<h2>Could not load</h2><p class="muted">Check your connection and reload.</p>'; });

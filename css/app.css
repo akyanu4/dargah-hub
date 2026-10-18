@@ -121,3 +121,6 @@ select#rr,select#as{display:block;width:100%;margin-top:4px}
 .tabs{overflow-x:auto}.tabs button{white-space:nowrap;flex:1 0 auto;padding:12px 12px}
 .errl{margin:8px 0;padding-left:18px;font-size:13px;color:#8a1c1c}.okl{color:#14573a;font-weight:600}
 table.pv2{font-size:13px}table.pv2 td,table.pv2 th{padding:6px 8px}
+
+.ev{display:flex;gap:12px;align-items:center;text-decoration:none;color:inherit}.evd{flex:none;width:54px;text-align:center;border-radius:12px;background:var(--night);color:#fff;padding:6px 0}.evd b{display:block;font-size:20px;line-height:1.1}.evd span{font-size:12px;text-transform:uppercase;letter-spacing:.04em}.nx{margin-top:4px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.two .btn{width:100%}

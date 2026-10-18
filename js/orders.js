@@ -122,8 +122,19 @@
       (o.vendorNote ? '<div class="box"><b>Message from the vendor</b><div>' + esc(o.vendorNote) + '</div></div>' : '') +
       '<div class="muted">Order ID <b>' + esc(o.id) + '</b>' + (o.createdAt ? ' · ' + esc(when(o.createdAt)) : '') + '</div>' +
       (wa && o.status !== 'cancelled' ? '<a class="btn full" target="_blank" rel="noopener" href="https://wa.me/' + esc(wa) + '?text=' + encodeURIComponent(msg) + '">Send this order on WhatsApp</a>' : '') +
-      (v.phone ? '<a class="btn ghost full" href="tel:' + esc(String(v.phone).replace(/[^\d+]/g, '')) + '">Call the vendor</a>' : '') + '</div>';
+      (v.phone ? '<a class="btn ghost full" href="tel:' + esc(String(v.phone).replace(/[^\d+]/g, '')) + '">Call the vendor</a>' : '') +
+      ((o.items || []).length ? '<button class="btn ghost full" type="button" data-again="' + esc((o.items || []).map(function (i) { return String(i.pid || '') + '~' + (i.qty || 1); }).join(',')) + '">Order these again</button>' : '') + '</div>';
   }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-again]'); if (!b) return;
+    var d = D(), n = 0, miss = 0;
+    String(b.getAttribute('data-again')).split(',').forEach(function (x) {
+      var a = x.split('~'), pid = a[0], q = Math.max(1, Math.min(20, +a[1] || 1));
+      var p = d.products.filter(function (y) { return y.live && (String(y.raw || y.id) === pid || y.id === pid); })[0];
+      if (!p || p.soldOut) { miss++; return; } for (var i = 0; i < q; i++) Cart.add(p.id); n++;
+    });
+    if (n) location.hash = '#/cart'; else { b.textContent = 'These items are no longer available'; b.disabled = true; }
+  });
   S.order = function (idstr) {
     var ids = String(idstr || '').split(',').filter(function (x) { return /^[A-Za-z0-9_-]{6,40}$/.test(x); }).slice(0, 10);
     return { title: 'Your order', html: '<div id="ov"><div class="box muted">Loading…</div></div>', bind: function (view) {
