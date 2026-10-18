@@ -61,10 +61,22 @@
       return { a: { code: code, vendorId: o.vendorId, offerId: o.id, title: o.title, kind: o.kind, value: o.value } };
     }).catch(function () { return { msg: 'Could not check the code. Check your connection and try again.' }; });
   }
+  /* Saved deals that can be used in this cart: not expired, online-capable, and from a shop that is in the cart. */
+  function savedUsable() {
+    var HO = root.HubOffers; if (!HO) return [];
+    var l = lsGet('hub_codes', []); if (!Array.isArray(l)) return [];
+    return l.filter(function (c) {
+      var o = HO.offerOf(c.offerId); if (!o || Date.now() >= HO.weekEnd(c.week).getTime()) return false;
+      return (o.kind === 'percent' || o.kind === 'flat') && HO.chan(o) !== 'shop' && vendorSub(o.vendorId) > 0;
+    });
+  }
   function codeBox() {
     if (!root.HubOffers || DB.mode === 'off') return '';
     if (applied) { var sub = vendorSub(applied.vendorId); return '<div class="box" id="cdbox"><b>Offer applied</b><div>' + esc(applied.title) + ' · −' + money(discountFor(applied, sub)) + '</div><button class="btn ghost sm" type="button" data-unapply="1">Remove code</button></div>'; }
-    return '<div class="box" id="cdbox"><b>Have an offer code?</b><div class="muted">Saved a deal from the Offers page? Enter its code to take the discount.</div><div class="mr"><input id="bcode" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" aria-label="Offer code" style="flex:1;min-width:120px"><button class="btn sm" type="button" data-apply="1">Apply</button></div><div id="cdmsg"></div></div>';
+    var us = savedUsable(), want = ''; try { want = sessionStorage.getItem('hub_usecode') || ''; } catch (e) {}
+    var pre = want || (us[0] ? us[0].code : '');
+    var chips = us.length ? '<div class="muted">Your saved deals for this cart:</div>' + us.map(function (c) { return '<button class="btn ghost sm" type="button" data-pick="' + esc(c.code) + '">' + esc(c.title || 'Deal') + ' · ' + esc(root.HubOffers.showCode(c.code)) + '</button>'; }).join(' ') : '';
+    return '<div class="box" id="cdbox"><b>Have an offer code?</b><div class="muted">Saved a deal from the Offers page? Enter its code to take the discount.</div><div class="mr"><input id="bcode" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="K7Q2-9MXD" value="' + esc(pre ? root.HubOffers.showCode(pre) : '') + '" aria-label="Offer code" style="flex:1;min-width:120px"><button class="btn sm" type="button" data-apply="1">Apply</button></div>' + chips + '<div id="cdmsg"></div></div>';
   }
 
   function drawCart(el, errNote) {
@@ -97,11 +109,13 @@
     el.innerHTML = html;
     if (el._bound) return; el._bound = true;
     el.addEventListener('click', function (e) {
+      var pk = e.target.closest && e.target.closest('[data-pick]');
+      if (pk) { var bi = document.getElementById('bcode'), ap = el.querySelector('[data-apply]'); if (bi) bi.value = root.HubOffers.showCode(pk.getAttribute('data-pick')); if (ap) ap.click(); return; }
       var ab = e.target.closest && e.target.closest('[data-apply],[data-unapply]');
       if (ab) {
         if (ab.hasAttribute('data-unapply')) { applied = null; keep(el, function () { drawCart(el); }); return; }
         var inp = document.getElementById('bcode'), msgBox = document.getElementById('cdmsg'); ab.disabled = true;
-        checkCode(inp ? inp.value : '').then(function (r) { if (r.a) { applied = r.a; keep(el, function () { drawCart(el); }); } else { ab.disabled = false; if (msgBox) msgBox.innerHTML = note(r.msg); } });
+        checkCode(inp ? inp.value : '').then(function (r) { if (r.a) { applied = r.a; try { sessionStorage.removeItem('hub_usecode'); } catch (e) {} keep(el, function () { drawCart(el); }); } else { ab.disabled = false; if (msgBox) msgBox.innerHTML = note(r.msg); } });
         return;
       }
       var b = e.target.closest && e.target.closest('[data-q],[data-rm]'); if (!b) return;

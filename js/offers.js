@@ -44,6 +44,10 @@
     return '<div class="codebox"><div class="muted">Show this code at the shop</div><div class="code">' + esc(showCode(c.code)) + '</div><div class="muted">One use. Use it by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + '). <a href="#/mycodes"><b>My saved deals</b></a></div>' + onlineNote(c) + '</div>';
   }
   document.addEventListener('click', function (e) {
+    var u = e.target.closest && e.target.closest('[data-usecart]');
+    if (u) { try { sessionStorage.setItem('hub_usecode', u.getAttribute('data-usecart')); } catch (x) {} location.hash = '#/cart'; return; }
+  });
+  document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('[data-claim]'); if (!b) return;
     var id = b.getAttribute('data-claim'), o = (D().offers || []).filter(function (x) { return x.id === id; })[0], area = b.parentNode;
     if (!o) return; b.disabled = true; b.textContent = 'Getting your code…';
@@ -60,7 +64,7 @@
     return { title: 'Saved deals', html: '<div id="mc"></div>', bind: function (view) {
       var box = view.querySelector('#mc'), l = myCodes();
       function st(r, c) { return r && r.status === 'redeemed' ? ['Used', ''] : Date.now() >= until(c) ? ['Expired', ''] : ['Ready to use', ' v']; }
-      box.innerHTML = '<h1>My saved deals</h1><p class="muted">Kept on this phone only. Each deal can be used once, any day until the Wednesday before the next Thursday offers. Show the code at the shop.</p>' + (l.length ? l.map(function (c) { return '<div class="box" data-c="' + esc(c.code) + '"><div class="otop"><b>' + esc(c.title) + '</b><span class="tag" data-s>…</span></div><div class="muted">' + esc(c.vname) + '</div><div class="code sm">' + esc(showCode(c.code)) + '</div><div class="muted">Use by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + ')</div>' + (c.vendorId ? '<a href="#/v/' + esc(c.vendorId) + '">Open the shop</a>' : '') + '</div>'; }).join('') : '<div class="box">No saved deals yet. Open <a href="#/offers"><b>this week\'s offers</b></a> and tap Save this deal.</div>');
+      box.innerHTML = '<h1>My saved deals</h1><p class="muted">Kept on this phone only. Each deal can be used once, any day until the Wednesday before the next Thursday offers. Show the code at the shop.</p>' + (l.length ? l.map(function (c) { return '<div class="box" data-c="' + esc(c.code) + '"><div class="otop"><b>' + esc(c.title) + '</b><span class="tag" data-s>…</span></div><div class="muted">' + esc(c.vname) + '</div><div class="code sm">' + esc(showCode(c.code)) + '</div><div class="muted">Use by ' + esc(fmt(lastDay(c))) + ' (' + esc(left(c)) + ')</div>' + onlineNote(c) + (c.vendorId ? '<a href="#/v/' + esc(c.vendorId) + '">Open the shop</a>' : '') + '</div>'; }).join('') : '<div class="box">No saved deals yet. Open <a href="#/offers"><b>this week\'s offers</b></a> and tap Save this deal.</div>');
       l.slice(0, 20).forEach(function (c) {
         var tag = box.querySelector('[data-c="' + c.code + '"] [data-s]');
         function paint(r) { var s = st(r, c); if (tag) { tag.textContent = s[0]; tag.className = 'tag' + s[1]; } }
@@ -150,8 +154,8 @@
   function onlineNote(c) {
     var o = offerOf(c.offerId), ch = o ? chan(o) : 'shop';
     if (ch === 'shop') return '<div class="muted">Use this deal at the shop.</div>';
-    if (ch === 'cart') return '<div class="muted">This deal is for online orders. Enter this code in your <a href="#/cart"><b>cart</b></a> and the discount is applied.</div>';
-    return '<div class="muted">Use it at the shop, or enter this code in your <a href="#/cart"><b>cart</b></a> for an online order.</div>';
+    if (ch === 'cart') return '<div class="muted">This deal is for online orders. Use it in your cart and the discount is applied. <button class="btn sm" type="button" data-usecart="' + esc(c.code) + '">Use in cart</button></div>';
+    return '<div class="muted">Use it at the shop, or use it on an online order. <button class="btn sm" type="button" data-usecart="' + esc(c.code) + '">Use in cart</button></div>';
   }
   /* Called when a vendor or admin confirms an order that carries an offer code: the code is spent now, once. */
   function useCode(order) {
@@ -327,5 +331,5 @@
     } };
   };
 
-  root.HubOffers = { chan: chan, weekEnd: weekEnd, cleanCode: cleanCode, useCode: useCode, offerOf: offerOf, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
+  root.HubOffers = { showCode: showCode, chan: chan, weekEnd: weekEnd, cleanCode: cleanCode, useCode: useCode, offerOf: offerOf, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
 })(typeof self !== 'undefined' ? self : this);
