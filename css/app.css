@@ -1,5 +1,7 @@
 :root{--ink:#161b2e;--bg:#f4f5f9;--panel:#fff;--night:#111936;--amber:#c98a0b;--amber-d:#a87108;--sage:#2f6f5f;--line:#dcdfe9;--muted:#5c6178;--r:14px}
-@media (prefers-color-scheme:dark){:root{--ink:#eceef6;--bg:#0c1126;--panel:#141b38;--night:#0a0f22;--line:#262f55;--muted:#a3abc9;--amber:#e0a62a;--amber-d:#e9b84a}}
+@media (prefers-color-scheme:dark){:root:not([data-mode=light]){--ink:#eceef6;--bg:#0c1126;--panel:#141b38;--night:#0a0f22;--line:#262f55;--muted:#a3abc9;--amber:#e0a62a;--amber-d:#e9b84a}}
+:root[data-mode=dark]{--ink:#eceef6;--bg:#0c1126;--panel:#141b38;--night:#0a0f22;--line:#262f55;--muted:#a3abc9;--amber:#e0a62a;--amber-d:#e9b84a}
+.seg{display:flex;gap:8px;margin-top:8px}.seg button{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:600 15px/1.2 inherit;font-family:inherit;cursor:pointer}.seg button.on{background:var(--night);color:#fff;border-color:var(--night)}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 h1,h2,h3,.brand,.price{font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif}

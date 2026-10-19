@@ -1,6 +1,18 @@
 /* Dargah Hub: a small data-driven site. All content lives in /data (JSON). No tracking, no accounts. */
 (function () {
   'use strict';
+  function curMode() { try { var m = localStorage.getItem('hub_mode'); return m === 'light' || m === 'dark' ? m : 'auto'; } catch (e) { return 'auto'; } }
+  function applyMode(m) {
+    try { if (m === 'auto') localStorage.removeItem('hub_mode'); else localStorage.setItem('hub_mode', m); } catch (e) {}
+    if (m === 'light' || m === 'dark') document.documentElement.setAttribute('data-mode', m); else document.documentElement.removeAttribute('data-mode');
+    var dark = m === 'dark' || (m === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches), tc = document.querySelector('meta[name=theme-color]');
+    if (tc) tc.setAttribute('content', dark ? '#0a0f22' : '#111936');
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('#modeseg [data-mode]'); if (!b) return;
+    applyMode(b.getAttribute('data-mode'));
+    Array.prototype.forEach.call(document.querySelectorAll('#modeseg button'), function (x) { x.className = x === b ? 'on' : ''; });
+  });
   try { var q = /[?&]theme=(\w+)/.exec(location.search); if (q) localStorage.setItem('hub_theme', q[1]); var th = localStorage.getItem('hub_theme'); if (th && th !== 'default') document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   var app = document.getElementById('app'), D = {}, cache = {};
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -56,7 +68,7 @@
     tools: function () { return '<div class="tgrid">' + TOOLS.map(toolTile).join('') + '</div>'; },
     more: function () {
       return '<div class="list"><a href="#/offers"><span>Weekly offers</span><i>›</i></a><a href="#/mycodes"><span>My saved deals</span><i>›</i></a><a href="#/upcoming"><span>Upcoming Urs and events</span><i>›</i></a><a href="#/following"><span>Following</span><i>›</i></a><a href="#/saved"><span>Saved items</span><i>›</i></a><a href="#/cart"><span>My cart</span><i>›</i></a><a href="#/orders"><span>My orders</span><i>›</i></a><a href="#/sell"><span>Sell on Dargah Hub</span><i>›</i></a><a href="#/join"><span>List your dargah</span><i>›</i></a><a href="#/mydargah"><span>Keeper: edit my dargah page</span><i>›</i></a><a href="#/advertise"><span>Advertise</span><i>›</i></a><a href="#/contact"><span>Contact and complaints</span><i>›</i></a><a href="terms.html"><span>Terms</span><i>›</i></a><a href="privacy.html"><span>Privacy</span><i>›</i></a></div>' +
-        '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
+        '<div class="box"><b>Appearance</b><div class="muted">Auto follows your phone. Your choice is remembered on this device.</div><div class="seg" id="modeseg">' + [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']].map(function (m) { return '<button type="button" data-mode="' + m[0] + '" class="' + (curMode() === m[0] ? 'on' : '') + '">' + m[1] + '</button>'; }).join('') + '</div></div>' + '<div class="box muted">' + esc(D.platform.note || '') + '</div><p class="muted center">' + esc(D.platform.name) + ' ' + esc(D.platform.tagline || '') + '</p>';
     },
     dargah: function (id) {
       var d = D.dargahs.filter(function (x) { return x.id === id; })[0]; if (!d) return nf();
