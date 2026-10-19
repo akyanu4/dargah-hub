@@ -70,3 +70,15 @@ Offers run Thursday to the next Thursday. Vendors post them at `#/myoffers` (Sel
 2. Put the public App ID in `js/config.js` as `onesignalAppId`. This makes the "Turn on offer alerts" button appear on the Offers page.
 3. In Vercel, Project Settings, Environment Variables, add `ONESIGNAL_APP_ID` and `ONESIGNAL_API_KEY` (the REST API key). Never put the REST key in the code or in a chat. Redeploy.
 4. Sign in as admin, open `#/adminoffers`, approve this week's offers, and press Send alert. Only your admin sign-in can send.
+
+
+## Automatic alerts (Urs, events and Thursday offers)
+
+A daily job (Vercel Cron, 10:00 India time) sends two kinds of alert to everyone who turned alerts on:
+1. The day before an Urs or event listed on any dargah page ("Urs tomorrow"). Monthly Gyarvi and weekly events are left out unless you set `ALERT_MONTHLY=1`.
+2. On Thursday, when approved offers for the new week exist ("New offers this week").
+
+To switch it on, add one more Vercel environment variable, then redeploy:
+- `CRON_SECRET`: any long random text (Vercel sends it with the daily call, so strangers cannot trigger alerts).
+
+In Admin → Weekly offers and alerts there is an "Automatic alerts" card to preview what would go out for today, tomorrow or a later day, and to send now. Dates come from the Umm al-Qura Hijri calendar and can differ by a day with moon sighting. Test dargahs and sample pages never send alerts.

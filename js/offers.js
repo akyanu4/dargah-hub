@@ -118,7 +118,7 @@
   function alertCard() {
     if (!appId()) return '';
     var on = lsGet('hub_push', 0);
-    return '<div class="box"><b>Get an alert when new offers start</b><div class="muted">One notification each Thursday. You can turn it off any time.</div><button class="btn' + (on ? ' ghost' : '') + ' full" type="button" id="pushb">' + (on ? 'Alerts are on. Tap to turn off' : 'Turn on offer alerts') + '</button><div id="pushm"></div></div>';
+    return '<div class="box"><b>Get alerts for offers and Urs</b><div class="muted">One alert when new offers start on Thursday, and one the day before an Urs or event. You can turn it off any time.</div><button class="btn' + (on ? ' ghost' : '') + ' full" type="button" id="pushb">' + (on ? 'Alerts are on. Tap to turn off' : 'Turn on offer alerts') + '</button><div id="pushm"></div></div>';
   }
   function bindAlert(view) {
     var b = view.querySelector('#pushb'); if (!b) return;
@@ -254,6 +254,9 @@
       function draw() {
         var ws = weeks(), pend = os2.filter(function (o) { return o.status === 'pending'; }), live = os2.filter(function (o) { return o.status === 'approved' && o.week === ws[0].key; }), nxt = os2.filter(function (o) { return o.status === 'approved' && o.week === ws[1].key; }), old = os2.filter(function (o) { return o.status !== 'pending' && !(o.status === 'approved' && (o.week === ws[0].key || o.week === ws[1].key)); });
         box.innerHTML = '<p><a href="#/admin"><b>‹ Admin</b></a></p><h1>Weekly offers</h1>' + msg +
+          '<h2>Automatic alerts</h2><form class="box" id="ea"><div class="muted">Every day at 10 am India time the app alerts everyone the day before an Urs or event listed on a dargah page, and on Thursday when offers start. Use this to see what would go out, or to send now.</div>' +
+          '<label class="fld">Check which day<select id="ead"><option value="1">Tomorrow (what the daily alert uses)</option><option value="0">Today</option><option value="2">In 2 days</option><option value="3">In 3 days</option><option value="7">In 7 days</option></select></label>' +
+          '<div class="mr"><button class="btn ghost" type="submit" data-do="prev">Preview</button><button class="btn" type="submit" data-do="send">Send now</button></div><div id="eam"></div></form>' +
           '<h2>Send an alert to everyone</h2><form class="box" id="af"><div class="muted">Goes to everyone who turned on offer alerts. Send it once a week, on Thursday.</div>' +
           '<label class="fld">Title<input id="at" maxlength="60" value="New offers this week"></label><label class="fld">Message<textarea id="am" rows="2" maxlength="150">' + esc(live.length + ' shop' + (live.length === 1 ? ' has' : 's have') + ' offers from ' + ws[0].range + '. Tap to see them.') + '</textarea></label>' +
           '<button class="btn full" type="submit"' + (live.length ? '' : ' disabled') + '>Send alert</button>' + (live.length ? '' : '<div class="muted">Approve at least one offer for this week first.</div>') + '</form>' +
@@ -320,6 +323,20 @@
           if (d.err) { alert(d.err); return; }
           done(DB.adminSaveOffer(g('nv'), d)); return;
         }
+        if (e.target.id === 'ea') {
+          var sub = e.submitter, doSend = sub && sub.getAttribute('data-do') === 'send', out = e.target.querySelector('#eam');
+          if (doSend && !confirm('Send these alerts to everyone who turned on alerts now?')) return;
+          if (sub) { sub.disabled = true; } out.innerHTML = '<div class="muted">Working…</div>';
+          DB.idToken().then(function (tok) {
+            return fetch('/api/events-alert', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ dry: !doSend, days: parseInt(g('ead'), 10) }) });
+          }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) {
+            if (sub) sub.disabled = false;
+            if (!r.ok) { out.innerHTML = note(j.error || 'Could not run the alerts.'); return; }
+            if (j.dry) out.innerHTML = j.items && j.items.length ? '<div class="muted">For ' + esc(j.target) + ', these would be sent:</div>' + j.items.map(function (it) { return '<div class="box"><b>' + esc(it.title) + '</b><div>' + esc(it.message) + '</div></div>'; }).join('') : '<div class="muted">Nothing to send for ' + esc(j.target) + '.</div>';
+            else out.innerHTML = (j.sent && j.sent.length ? j.sent.map(function (x) { return note((x.ok ? 'Sent: ' : 'Not sent: ') + x.title + (x.error ? '. ' + x.error : ''), x.ok); }).join('') : '<div class="muted">Nothing to send for ' + esc(j.target) + '.</div>');
+          }); }).catch(function () { if (sub) sub.disabled = false; out.innerHTML = note('Could not reach the server. Try again.'); });
+          return;
+        }
         if (e.target.id === 'af') {
           var t = g('at').trim(), m = g('am').trim(); if (!t || !m) { alert('Add a title and a message.'); return; }
           if (!confirm('Send this alert to everyone who turned on offer alerts?')) return;
@@ -334,5 +351,5 @@
     } };
   };
 
-  root.HubOffers = { showCode: showCode, chan: chan, weekEnd: weekEnd, cleanCode: cleanCode, useCode: useCode, offerOf: offerOf, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
+  root.HubOffers = { alertCard: alertCard, bindAlert: bindAlert, showCode: showCode, chan: chan, weekEnd: weekEnd, cleanCode: cleanCode, useCode: useCode, offerOf: offerOf, homeBlock: homeBlock, vendorBlock: vendorBlock, weeks: weeks, thursday: thu, mapsUrl: mapsUrl, visitRow: visitRow };
 })(typeof self !== 'undefined' ? self : this);

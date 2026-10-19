@@ -162,7 +162,7 @@
       } };
   };
   S.upcoming = function () {
-    return { title: 'Upcoming', html: '<h1>Upcoming dates</h1><p class="muted">Worked out from each dargah\'s listed events and the Hijri calendar. Dates can move by a day with moon sighting, so confirm with the dargah.</p><div class="chips" id="uch"></div><div class="dgl" id="ul"></div>',
+    return { title: 'Upcoming', html: '<h1>Upcoming dates</h1><p class="muted">Worked out from each dargah\'s listed events and the Hijri calendar. Dates can move by a day with moon sighting, so confirm with the dargah.</p><div class="chips" id="uch"></div><div class="dgl" id="ul"></div><div id="ualert"></div>',
       bind: function (view) {
         var only = false;
         function draw() {
@@ -172,6 +172,7 @@
         }
         view.querySelector('#uch').addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-o]'); if (a) { only = a.getAttribute('data-o') === '1'; draw(); } });
         draw();
+        if (root.HubOffers && root.HubOffers.alertCard) { var ua = view.querySelector('#ualert'); if (ua) { ua.innerHTML = root.HubOffers.alertCard(); root.HubOffers.bindAlert(view); } }
       } };
   };
   S.following = function () {
