@@ -26,14 +26,19 @@ module.exports = async (req, res) => {
   const title = String((b && b.title) || '').trim().slice(0, 60), message = String((b && b.message) || '').trim().slice(0, 150);
   if (!title || !message) return res.status(400).json({ error: 'Add a title and a message.' });
   const site = (process.env.SITE_URL || 'https://dargah-hub.vercel.app').replace(/\/$/, '');
-  try {
+  const send = async (segment) => {
     const r = await fetch('https://api.onesignal.com/notifications', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Key ' + key },
-      body: JSON.stringify({ app_id: appId, target_channel: 'push', included_segments: ['Subscribed Users'], headings: { en: title }, contents: { en: message }, url: site + '/#/offers' })
+      body: JSON.stringify({ app_id: appId, target_channel: 'push', included_segments: [segment], headings: { en: title }, contents: { en: message }, url: site + '/#/offers' })
     });
     const j = await r.json().catch(() => ({}));
+    return { r, j };
+  };
+  try {
+    let { r, j } = await send('Subscribed Users');
+    if (r.ok && !j.id) { const again = await send('Total Subscriptions'); if (again.r.ok && again.j.id) { r = again.r; j = again.j; } }
     if (!r.ok) return res.status(502).json({ error: (j.errors && JSON.stringify(j.errors).slice(0, 200)) || 'OneSignal refused the alert.' });
-    if (!j.id) return res.status(409).json({ error: 'OneSignal accepted the request but nobody received it. No phone is subscribed yet, or the subscription is not active. Turn on alerts on the phone first.' });
+    if (!j.id) return res.status(409).json({ error: 'OneSignal accepted the request but nobody received it. ' + (j.errors ? 'OneSignal says: ' + JSON.stringify(j.errors).slice(0, 200) : 'No active subscription was found.') });
     return res.status(200).json({ ok: true, id: j.id });
   } catch (e) { return res.status(502).json({ error: 'Could not reach OneSignal. Try again.' }); }
 };
