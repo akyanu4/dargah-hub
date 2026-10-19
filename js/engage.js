@@ -179,7 +179,7 @@
   S.following = function () {
     return { title: 'Following', html: '<div id="fv"></div>', bind: function (view) {
       var f = follows(), dg = D().dargahs.filter(function (x) { return f.d.indexOf(x.id) >= 0; }), vs = (D().vendors || []).filter(function (x) { return f.v.indexOf(x.id) >= 0; }), ev = upcoming({ maxDays: 365, onlyFollowed: true });
-      view.querySelector('#fv').innerHTML = '<h1>Following</h1><p class="muted">Kept on this phone only.</p>' +
+      view.querySelector('#fv').innerHTML = '<h1>Following</h1><p class="muted">' + (window.HubAccount ? HubAccount.hint() : 'Kept on this phone only.') + '</p>' +
         (ev.length ? '<h2>Coming up</h2><div class="dgl">' + ev.slice(0, 6).map(evRow).join('') + '</div>' : '') +
         '<h2>Dargahs</h2>' + (dg.length ? '<div class="dgl">' + dg.map(function (x, i) { return H().dcard(x, i); }).join('') + '</div>' : '<div class="box">None yet. Open a dargah and tap Follow.</div>') +
         '<h2>Shops</h2>' + (vs.length ? '<div class="list">' + vs.map(function (v) { return '<a href="#/v/' + esc(v.id) + '"><span>' + esc(v.name) + '<br><small class="muted">' + esc(v.city) + '</small></span><i>›</i></a>'; }).join('') + '</div>' : '<div class="box">None yet. Open a shop and tap Follow.</div>');
@@ -188,9 +188,11 @@
   S.saved = function () {
     return { title: 'Saved', html: '<div id="sv"></div>', bind: function (view) {
       var ids = saved(), ps = ids.map(function (id) { return D().products.filter(function (p) { return p.id === id; })[0]; }).filter(Boolean);
-      view.querySelector('#sv').innerHTML = '<h1>Saved items</h1><p class="muted">Kept on this phone only.</p>' + (ps.length ? '<div class="grid">' + ps.map(function (p, i) { return H().card(p, i); }).join('') + '</div>' : '<div class="box">Nothing saved yet. Open an item and tap Save for later.<br><a href="#/shop"><b>Browse the shop</b></a></div>');
+      view.querySelector('#sv').innerHTML = '<h1>Saved items</h1><p class="muted">' + (window.HubAccount ? HubAccount.hint() : 'Kept on this phone only.') + '</p>' + (ps.length ? '<div class="grid">' + ps.map(function (p, i) { return H().card(p, i); }).join('') + '</div>' : '<div class="box">Nothing saved yet. Open an item and tap Save for later.<br><a href="#/shop"><b>Browse the shop</b></a></div>');
     } };
   };
 
-  root.HubEngage = { homeBlock: homeBlock, eventNote: eventNote, followBtn: followBtn, saveBtn: saveBtn, share: share, dargahShare: dargahShare, upcoming: upcoming, parseWhen: parseWhen, nextDate: nextDate, isFollow: isFollow };
+  function snapshot() { return { follow: follows(), saved: saved() }; }
+  function apply(s) { if (s && s.follow) lsSet('hub_follow', s.follow); if (s && Array.isArray(s.saved)) lsSet('hub_saved', s.saved.slice(0, 100)); }
+  root.HubEngage = { snapshot: snapshot, apply: apply, homeBlock: homeBlock, eventNote: eventNote, followBtn: followBtn, saveBtn: saveBtn, share: share, dargahShare: dargahShare, upcoming: upcoming, parseWhen: parseWhen, nextDate: nextDate, isFollow: isFollow };
 })(typeof self !== 'undefined' ? self : this);

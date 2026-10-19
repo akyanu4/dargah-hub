@@ -82,3 +82,11 @@ To switch it on, add one more Vercel environment variable, then redeploy:
 - `CRON_SECRET`: any long random text (Vercel sends it with the daily call, so strangers cannot trigger alerts).
 
 In Admin → Weekly offers and alerts there is an "Automatic alerts" card to preview what would go out for today, tomorrow or a later day, and to send now. Dates come from the Umm al-Qura Hijri calendar and can differ by a day with moon sighting. Test dargahs and sample pages never send alerts.
+
+## Visitor accounts (optional)
+
+Visitors can create an account at More → "Sign in or create account" (email or Google). It keeps what they follow, what they saved and their saved deal codes, so these come with them to a new phone. Nothing in the app needs an account.
+
+- Uses the same Firebase sign-in as vendors and admins (turn on Email/Password and Google in Firebase → Authentication → Sign-in method if you have not).
+- Stored in Firestore `users/<uid>`. Each person can read and write only their own document. **Publish the latest `firestore.rules`** for this to work.
+- Visitors can delete their synced data from the Account page.

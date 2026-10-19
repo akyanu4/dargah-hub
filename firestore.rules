@@ -183,6 +183,18 @@ service cloud.firestore {
         && okOwnerEdit(request.resource.data));
     }
 
+    // Visitor accounts (optional). Each person can read and write only their own document, which holds the dargahs and items they
+    // follow or saved and their saved deal codes, so these follow them to a new phone.
+    match /users/{uid} {
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['follow', 'saved', 'codes', 'updatedAt'])
+        && request.resource.data.get('follow', {}) is map
+        && request.resource.data.get('saved', []) is list && request.resource.data.get('saved', []).size() <= 100
+        && request.resource.data.get('codes', '') is string && request.resource.data.get('codes', '').size() <= 40000
+        && request.resource.data.updatedAt == request.time;
+    }
+
     // Moon sighting: one document, settings/hijri, with a whole number of days (-2 to 2). Everyone can read it; only an admin can change it.
     match /settings/{id} {
       allow read: if true;

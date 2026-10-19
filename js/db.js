@@ -20,6 +20,9 @@
     im.signInGoogle = function () { return im.signIn('demo@vendor.test'); };
     im.signUp = function (email) { return im.signIn(email); };
     im.reset = function () { return Promise.resolve(); };
+    im.myProfile = function () { return Promise.resolve(s.user && s.users && s.users[s.user.uid] || null); };
+    im.saveProfile = function (d) { s.users = s.users || {}; s.users[s.user.uid] = d; save(); return Promise.resolve(); };
+    im.deleteProfile = function () { if (s.users && s.user) delete s.users[s.user.uid]; save(); return Promise.resolve(); };
     im.signOut = function () { s.user = null; api.user = null; save(); emit(); return Promise.resolve(); };
     im.isAdmin = function () { return Promise.resolve(!!(s.user && s.user.email === 'admin@demo.test')); };
     im.myVendor = function () { return Promise.resolve(s.user && s.vendors[s.user.uid] || null); };
@@ -95,6 +98,9 @@
     im.signUp = function (e, p) { return boot().then(function (x) { return x.au.createUserWithEmailAndPassword(auth, e, p); }); };
     im.reset = function (e) { return boot().then(function (x) { return x.au.sendPasswordResetEmail(auth, e); }); };
     im.signOut = function () { return boot().then(function (x) { return x.au.signOut(auth); }); };
+    im.myProfile = function () { return boot().then(function (x) { if (!auth.currentUser) return null; return x.fs.getDoc(x.fs.doc(db, 'users', auth.currentUser.uid)).then(function (d) { return d.exists() ? d.data() : null; }); }); };
+    im.saveProfile = function (d) { return boot().then(function (x) { return x.fs.setDoc(x.fs.doc(db, 'users', auth.currentUser.uid), Object.assign({}, d, { updatedAt: x.fs.serverTimestamp() })); }); };
+    im.deleteProfile = function () { return boot().then(function (x) { return x.fs.deleteDoc(x.fs.doc(db, 'users', auth.currentUser.uid)); }); };
     im.isAdmin = function () { return boot().then(function (x) { if (!auth.currentUser) return false; return x.fs.getDoc(x.fs.doc(db, 'admins', auth.currentUser.uid)).then(function (d) { return d.exists(); }).catch(function () { return false; }); }); };
     im.myVendor = function () { return boot().then(function (x) { return x.fs.getDoc(x.fs.doc(db, 'vendors', auth.currentUser.uid)).then(function (d) { return d.exists() ? Object.assign({ id: d.id }, d.data()) : null; }); }); };
     im.saveVendor = function (d) { return boot().then(function (x) { var ref = x.fs.doc(db, 'vendors', auth.currentUser.uid); return x.fs.getDoc(ref).then(function (old) { var data = strip(Object.assign({}, d, { updatedAt: x.fs.serverTimestamp() })); data.status = old.exists() ? old.data().status : 'pending'; if (old.exists() && old.data().verified !== undefined) data.verified = old.data().verified; return x.fs.setDoc(ref, data); }); }); };
@@ -186,7 +192,7 @@
   }
 
   var impl = api.mode === 'firebase' ? fbImpl() : api.mode === 'mock' ? mockImpl() : null;
-  ['signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah', 'claimOffer', 'getRedemption', 'vendorRedemptions', 'redeemCode', 'adminRedemptions', 'idToken', 'myOffers', 'saveOffer', 'deleteOffer', 'adminOffers', 'adminSetOffer', 'adminSaveOffer'].forEach(function (k) {
+  ['myProfile', 'saveProfile', 'deleteProfile', 'signIn', 'signInGoogle', 'signUp', 'reset', 'signOut', 'isAdmin', 'myVendor', 'saveVendor', 'myProducts', 'saveProduct', 'deleteProduct', 'live', 'adminVendors', 'adminSetStatus', 'createOrders', 'getOrder', 'vendorOrders', 'setOrderStatus', 'createLead', 'createReport', 'adminLeads', 'adminReports', 'adminSetLead', 'adminSetReport', 'adminSetVerified', 'adminHideProduct', 'adminOrders', 'adminImport', 'adminDeleteVendor', 'adminDargahs', 'adminUpdateDargah', 'adminDeleteDargah', 'createClaim', 'myClaims', 'adminClaims', 'adminSetClaim', 'adminSetDargahOwner', 'adminTransferVendor', 'myDargahs', 'saveMyDargah', 'claimOffer', 'getRedemption', 'vendorRedemptions', 'redeemCode', 'adminRedemptions', 'idToken', 'myOffers', 'saveOffer', 'deleteOffer', 'adminOffers', 'adminSetOffer', 'adminSaveOffer'].forEach(function (k) {
     api[k] = function () { return impl && impl[k] ? impl[k].apply(null, arguments) : Promise.reject(new Error('Vendor accounts are not switched on yet.')); };
   });
   if (impl && impl.init) impl.init().catch(function () {});
