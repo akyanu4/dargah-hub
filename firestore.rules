@@ -183,6 +183,13 @@ service cloud.firestore {
         && okOwnerEdit(request.resource.data));
     }
 
+    // Moon sighting: one document, settings/hijri, with a whole number of days (-2 to 2). Everyone can read it; only an admin can change it.
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin() && id == 'hijri' && request.resource.data.keys().hasOnly(['offset', 'updatedAt', 'auto'])
+        && request.resource.data.auto is bool && request.resource.data.offset is int && request.resource.data.offset >= -2 && request.resource.data.offset <= 2;
+    }
+
     // Weekly offers (Thursday to Thursday). A vendor posts an offer, an admin approves it, then it is public.
     match /offers/{id} {
       allow read: if resource.data.status == 'approved' || (signedIn() && resource.data.vendorId == request.auth.uid) || isAdmin();

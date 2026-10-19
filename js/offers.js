@@ -254,6 +254,9 @@
       function draw() {
         var ws = weeks(), pend = os2.filter(function (o) { return o.status === 'pending'; }), live = os2.filter(function (o) { return o.status === 'approved' && o.week === ws[0].key; }), nxt = os2.filter(function (o) { return o.status === 'approved' && o.week === ws[1].key; }), old = os2.filter(function (o) { return o.status !== 'pending' && !(o.status === 'approved' && (o.week === ws[0].key || o.week === ws[1].key)); });
         box.innerHTML = '<p><a href="#/admin"><b>‹ Admin</b></a></p><h1>Weekly offers</h1>' + msg +
+          '<h2>Moon sighting</h2><form class="box" id="mn"><div class="muted">Urs dates follow the moon. By default the app works out the month start for India from the moon itself (can the crescent be seen from Hyderabad on the evening of the new moon), so nothing needs doing. It is a prediction: if the moon committee announces a different day, choose a fixed shift here and everything follows it. Switch back to Automatic afterwards.</div><div class="muted">Today by the calendar now in use: <b>' + esc(window.HubTools && HubTools.hijriText ? HubTools.hijriText(new Date()) : '') + '</b></div>' +
+          '<label class="fld">Month start<select id="mno"><option value="auto"' + (window.HubMoon && HubMoon.auto ? ' selected' : '') + '>Automatic (predicted from the moon)</option>' + [[-2, 'Fixed: 2 days behind Saudi calendar'], [-1, 'Fixed: 1 day behind Saudi calendar'], [0, 'Fixed: same as Saudi calendar'], [1, 'Fixed: 1 day ahead'], [2, 'Fixed: 2 days ahead']].map(function (x) { return '<option value="' + x[0] + '"' + (window.HubMoon && !HubMoon.auto && x[0] === HubMoon.offset ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></label>' +
+          '<div class="mr"><button class="btn" type="submit">Save</button></div><div id="mnm"></div></form>' +
           '<h2>Automatic alerts</h2><form class="box" id="ea"><div class="muted">Every day at 10 am India time the app alerts everyone the day before an Urs or event listed on a dargah page, and on Thursday when offers start. Use this to see what would go out, or to send now.</div>' +
           '<label class="fld">Check which day<select id="ead"><option value="1">Tomorrow (what the daily alert uses)</option><option value="0">Today</option><option value="2">In 2 days</option><option value="3">In 3 days</option><option value="7">In 7 days</option></select></label>' +
           '<div class="mr"><button class="btn ghost" type="submit" data-do="prev">Preview</button><button class="btn" type="submit" data-do="send">Send now</button></div><div id="eam"></div></form>' +
@@ -322,6 +325,16 @@
           if (d.title.length < 3 || !g('nv')) { alert('Choose a vendor and add a title.'); return; }
           if (d.err) { alert(d.err); return; }
           done(DB.adminSaveOffer(g('nv'), d)); return;
+        }
+        if (e.target.id === 'mn') {
+          var au = g('mno') === 'auto', mo = au ? 0 : parseInt(g('mno'), 10), mm = e.target.querySelector('#mnm'), mb = e.target.querySelector('button[type=submit]');
+          if (window.HUB_CONFIG && HUB_CONFIG.mock) { HubMoon.set(mo, au); mm.innerHTML = note('Saved (demo mode, this browser only).', true); return; }
+          mb.disabled = true; mm.innerHTML = '<div class="muted">Saving…</div>';
+          DB.idToken().then(function (tok) {
+            return fetch('https://firestore.googleapis.com/v1/projects/siddiqgulshan-25903/databases/(default)/documents/settings/hijri?updateMask.fieldPaths=offset&updateMask.fieldPaths=auto&updateMask.fieldPaths=updatedAt', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ fields: { auto: { booleanValue: au }, offset: { integerValue: String(mo) }, updatedAt: { timestampValue: new Date().toISOString() } } }) });
+          }).then(function (r) { mb.disabled = false; if (!r.ok) { mm.innerHTML = note('Could not save. Check that the latest Firestore rules are published.'); return; } HubMoon.set(mo, au); mm.innerHTML = note('Saved. Urs dates and alerts now follow this.', true); })
+            .catch(function () { mb.disabled = false; mm.innerHTML = note('Could not reach the server. Try again.'); });
+          return;
         }
         if (e.target.id === 'ea') {
           var sub = e.submitter, doSend = sub && sub.getAttribute('data-do') === 'send', out = e.target.querySelector('#eam');

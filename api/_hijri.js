@@ -23,11 +23,16 @@ function parseWhen(text) {
 }
 
 let fmt = null;
+let AUTO = true;
+let OFFSET = 0; // days the moon-sighted calendar is ahead (+) or behind (-) Umm al-Qura
+const setMode = (auto, n) => { AUTO = auto !== false; setOffset(n); };
+const setOffset = (n) => { n = parseInt(n, 10); OFFSET = isNaN(n) ? 0 : Math.max(-2, Math.min(2, n)); };
 /* dateUtcNoon: a Date at 12:00 UTC on the calendar day wanted. */
 function hijriOf(dateUtcNoon) {
+  if (AUTO) { try { const a = require('../js/moonsight.js').hijriOfDay(Math.floor(dateUtcNoon.getTime() / 86400000)); if (a) return { d: a.d, m: a.m }; } catch (e) { /* fall back to Umm al-Qura */ } }
   try {
     fmt = fmt || new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'UTC' });
-    const o = {}; fmt.formatToParts(dateUtcNoon).forEach((x) => { if (x.type !== 'literal') o[x.type] = parseInt(x.value, 10); });
+    const o = {}; fmt.formatToParts(OFFSET ? new Date(dateUtcNoon.getTime() + OFFSET * 86400000) : dateUtcNoon).forEach((x) => { if (x.type !== 'literal') o[x.type] = parseInt(x.value, 10); });
     return o.month && o.day ? { d: o.day, m: o.month } : null;
   } catch (e) { return null; }
 }
@@ -45,4 +50,4 @@ function istDay(nowMs) {
 const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
 const ymd = (d) => d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0');
 
-module.exports = { parseWhen, hijriOf, matches, istDay, addDays, ymd };
+module.exports = { setMode, setOffset, parseWhen, hijriOf, matches, istDay, addDays, ymd };

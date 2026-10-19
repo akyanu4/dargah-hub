@@ -27,8 +27,9 @@
   /* ---- Hijri ---- */
   var HM = ['Muharram', 'Safar', "Rabi' al-Awwal", "Rabi' al-Thani", 'Jumada al-Ula', 'Jumada al-Akhirah', 'Rajab', "Sha'ban", 'Ramadan', 'Shawwal', "Dhu al-Qa'dah", 'Dhu al-Hijjah'];
   function hijri(date) {
+    var mp = window.HubMoon && HubMoon.parts(date || new Date()); if (mp) return mp;
     try {
-      var p = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric' }).formatToParts(date || new Date()), o = {};
+      var p = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric' }).formatToParts(window.HubMoon ? HubMoon.shift(date || new Date()) : (date || new Date())), o = {};
       p.forEach(function (x) { if (x.type !== 'literal') o[x.type] = parseInt(x.value, 10); });
       if (!o.month || !o.day) return null; return { d: o.day, m: o.month, y: parseInt(String(o.year).replace(/\D/g, ''), 10) };
     } catch (e) { return null; }

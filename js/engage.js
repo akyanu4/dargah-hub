@@ -20,15 +20,16 @@
   var WD = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   var fmt = null;
   function hij(date) {
+    var mp = window.HubMoon && HubMoon.parts(date); if (mp) return { d: mp.d, m: mp.m };
     try {
       fmt = fmt || new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'numeric', year: 'numeric' });
-      var o = {}; fmt.formatToParts(date).forEach(function (x) { if (x.type !== 'literal') o[x.type] = parseInt(x.value, 10); });
+      var o = {}; fmt.formatToParts(window.HubMoon ? HubMoon.shift(date) : date).forEach(function (x) { if (x.type !== 'literal') o[x.type] = parseInt(x.value, 10); });
       return o.month && o.day ? { d: o.day, m: o.month } : null;
     } catch (e) { return null; }
   }
   var calCache = null;
   function cal() {
-    var t = new Date(), key = t.getFullYear() + '-' + t.getMonth() + '-' + t.getDate();
+    var t = new Date(), key = t.getFullYear() + '-' + t.getMonth() + '-' + t.getDate() + '-' + (window.HubMoon ? HubMoon.key() : 0);
     if (calCache && calCache.key === key) return calCache.days;
     var days = [];
     for (var i = 0; i < 400; i++) { var dt = new Date(t.getFullYear(), t.getMonth(), t.getDate() + i, 12); days.push({ date: dt, h: hij(dt), wd: dt.getDay() }); }
@@ -81,7 +82,7 @@
   /* A small line under an event on the dargah page, e.g. "Next: Fri 20 Dec (in 12 days)". */
   function eventNote(e) {
     var p = parseWhen(e && e.when), n = p && nextDate(p); if (!n) return '';
-    return '<div class="muted nx">Next: ' + esc(dstr(n.date)) + ' (' + esc(away(n.days).toLowerCase()) + ')</div>';
+    return '<div class="muted nx">Next: ' + esc(dstr(n.date)) + ' (' + esc(away(n.days).toLowerCase()) + ')</div><div class="muted nx">May move by a day with the moon.</div>';
   }
   function homeBlock() {
     var f = follows(), list = upcoming({ maxDays: 90 }), mine = list.filter(function (x) { return x.followed; });
@@ -162,7 +163,7 @@
       } };
   };
   S.upcoming = function () {
-    return { title: 'Upcoming', html: '<h1>Upcoming dates</h1><p class="muted">Worked out from each dargah\'s listed events and the Hijri calendar. Dates can move by a day with moon sighting, so confirm with the dargah.</p><div class="chips" id="uch"></div><div class="dgl" id="ul"></div><div id="ualert"></div>',
+    return { title: 'Upcoming', html: '<h1>Upcoming dates</h1><p class="muted">Worked out from each dargah\'s listed events and the moon, using the month start predicted for India. The moon committee may announce a day earlier or later, so confirm with the dargah.</p><div class="chips" id="uch"></div><div class="dgl" id="ul"></div><div id="ualert"></div>',
       bind: function (view) {
         var only = false;
         function draw() {

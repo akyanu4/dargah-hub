@@ -7,8 +7,8 @@
      ONESIGNAL_APP_ID, ONESIGNAL_API_KEY   as for the manual alerts
      ALERT_MONTHLY      set to 1 to also alert the day before each monthly Gyarvi (off by default, it is frequent) */
 const crypto = require('crypto');
-const { adminCheck, sendPush, runQuery, eq, siteUrl } = require('./_lib');
-const { parseWhen, matches, istDay, addDays, ymd } = require('./_hijri');
+const { PROJECT, adminCheck, sendPush, runQuery, eq, siteUrl } = require('./_lib');
+const { setMode, parseWhen, matches, istDay, addDays, ymd } = require('./_hijri');
 
 const same = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 
@@ -46,8 +46,19 @@ function eventMessage(due, label) {
   return { title: title.slice(0, 60), message: msg.slice(0, 150) };
 }
 
+/* The moon-sighting shift the admin set (settings/hijri). Anyone may read it. Falls back to 0. */
+async function moonSetting() {
+  try {
+    const r = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/settings/hijri`);
+    if (!r.ok) return { auto: true, offset: 0 };
+    const fl = (await r.json()).fields || {}, f = fl.offset;
+    const off = f ? parseInt(f.integerValue != null ? f.integerValue : f.doubleValue, 10) || 0 : 0;
+    return { auto: fl.auto ? fl.auto.booleanValue !== false : !f, offset: off };
+  } catch (e) { return { auto: true, offset: 0 }; }
+}
 async function plan(nowMs, opts) {
   opts = opts || {};
+  if (opts.offset != null) setMode(false, opts.offset); else { const ms = await moonSetting(); setMode(ms.auto, ms.offset); }
   const today = istDay(nowMs), ahead = opts.days == null ? 1 : opts.days, target = addDays(today, ahead);
   const label = ahead === 0 ? 'today' : ahead === 1 ? 'tomorrow' : 'in ' + ahead + ' days';
   const items = [];
